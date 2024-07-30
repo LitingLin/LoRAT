@@ -1,0 +1,11 @@
+filters:
+  - type: "data_cleaning.annotation_standard"
+    parameters:
+      bounding_box_format: "XYXY"
+      bounding_box_coordinate_system: "Continuous"
+
+datasets:
+  - name: "GOT10k"
+    type: "SOT"
+    splits:
+      - "test"

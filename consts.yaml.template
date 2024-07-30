@@ -1,0 +1,43 @@
+# Misc Settings
+num_train_workers: 6
+num_val_workers: 6
+num_eval_workers: 4
+num_io_threads_per_worker: 1
+on_shared_file_system: false
+
+# Dataset Paths
+
+LaSOT_PATH: ''
+LaSOT_Extension_PATH: ''
+
+GOT10k_PATH: ''
+
+TrackingNet_PATH: ''
+
+UAV123_PATH: ''
+
+TNL2K_TRAIN_PATH: ''
+TNL2K_TEST_PATH: ''
+
+COCO_2014_PATH: ''
+COCO_2017_PATH: ''
+
+OTB_PATH: ''
+NFS_PATH: ''
+
+VastTrack_TRAIN_PATH: ''
+VastTrack_TEST_PATH: ''
+
+VOTS2023_PATH: ''
+VOT_TESTS_MULTIOBJECT_PATH: ''
+
+ILSVRC_VID_PATH: ''
+ILSVRC_DET_PATH: ''
+MOT17_PATH: ''
+MOT20_PATH: ''
+UCF101_PATH: ''
+# http://www.thumos.info/download.html
+UCF101_THUMOS_2015_HUMAN_ANNOTATION: ''
+TempleColor_PATH: ''
+Youtube_VIS_PATH: ''
+ImageNet-21k_PATH: ''

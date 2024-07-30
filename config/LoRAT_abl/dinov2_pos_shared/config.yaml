@@ -1,0 +1,41 @@
+name: "DINOv2/B-224"
+
+logging:
+  category: "LoRAT"
+  tags:
+    - "DINOv2"
+    - "base"
+    - "224"
+
+type: "LoRAT-ablation"
+
+common:
+  template_size: [ 112, 112 ]
+  search_region_size: [ 224, 224 ]
+  template_feat_size: [ 8, 8 ]
+  search_region_feat_size: &search_region_feat_size [ 16, 16 ]
+  response_map_size: *search_region_feat_size
+  template_feat_data_layout: "NLC"
+  interpolation_mode: "bilinear"
+  interpolation_align_corners: false
+  normalization: "imagenet"
+
+model:
+  type: "dinov2_input_embedding_ablation"
+  backbone:
+    type: "DINOv2"
+    parameters:
+      name: "ViT-B/14"
+      acc: "default"
+
+  pos_embed_trainable: false
+  enable_token_type_embed: false
+  enable_template_foreground_indicating_embed: false
+
+  lora:
+    r: 64
+    alpha: 64
+    dropout: 0.
+    use_rslora: false
+
+run: !include "../run.yaml"

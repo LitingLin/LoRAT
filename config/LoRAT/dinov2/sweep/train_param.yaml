@@ -1,0 +1,33 @@
+tune:
+  name: "search lr"
+  method: "random"
+  metric:
+    name: "val_loss"
+    goal: "minimize"
+  parameters:
+    learning_rate:
+      distribution: "log_uniform_values"
+      min: 1.e-5
+      max: 1.e-3
+    batch_size:
+      distribution: "categorical"
+      values: [ 32, 48, 64, 128 ]
+  early_terminate:
+    type: "hyperband"
+    min_iter: 3
+mixin:
+  dynamic:
+    learning_rate:
+      path: "run.runner.train.optimization.optimizer.lr"
+    batch_size:
+      path:
+        - "run.data.train.batch_size"
+        - "run.data.val.batch_size"
+  fixed:
+    - path: "run.num_epochs"
+      value: 5
+    - path: "run.runner.train.optimization.lr_scheduler"
+      action: "insert"
+      value:
+        override:
+          num_epochs: 170

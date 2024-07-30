@@ -1,0 +1,23 @@
+filters:
+  - type: "data_cleaning.annotation_standard"
+    parameters:
+      bounding_box_format: "XYXY"
+      bounding_box_coordinate_system: "Continuous"
+  - type: "data_cleaning.bounding_box"
+    parameters:
+      fit_in_image_size: true
+      update_validity: true
+      remove_invalid_objects: true
+      remove_empty_objects: true
+  - type: "data_cleaning.integrity"
+    parameters:
+      remove_zero_annotation_objects: true
+      remove_zero_annotation_image: true
+      remove_zero_annotation_video_head_tail: true
+      remove_invalid_image: true
+
+datasets:
+  - name: "GOT10k"
+    type: "SOT"
+    splits:
+      - "train"

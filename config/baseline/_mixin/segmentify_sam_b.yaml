@@ -1,0 +1,11 @@
+- path: "run.runner.test.evaluator.pipeline"
+  action: "merge"
+  value:
+    segmentify:
+      search_region_size: [ 1024, 1024 ]
+      area_factor: 2.
+      mask_generator:
+        type: "sam"
+        model_type: "fast"
+        model_name: "vit_b"
+        mask_threshold: 0.

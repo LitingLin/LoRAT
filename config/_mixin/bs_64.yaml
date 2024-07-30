@@ -1,0 +1,4 @@
+- path:
+    - "run.data.train.global_batch_size"
+    - "run.data.val.global_batch_size"
+  value: 64

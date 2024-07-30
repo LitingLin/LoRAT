@@ -1,0 +1,35 @@
+- path: "run.data.train.source"
+  value:
+    type: "dataset"
+    parameters: !include "../../_dataset/train-got10k.yaml"
+- path: "run.data.val.source"
+  value:
+    type: "dataset"
+    parameters: !include "../../_dataset/val-got10k.yaml"
+- path: "run.data.eval.source"
+  value:
+    type: "dataset"
+    parameters: !include "../../_dataset/test-got10k.yaml"
+- path: "run.data.eval.sampler.repeat_times"
+  value:
+    - match:
+        type: "dataset"
+        name: "GOT-10k"
+      value: 3
+- path: "run.data.eval.result_collector.dispatch"
+  value:
+    - match:
+        name: "GOT-10k"
+        split: "test"
+      handlers:
+        - type: "external/GOT10k"
+          file_name: "GOT10k-test"
+          bbox_rasterize: true
+- path: "run.num_epochs"
+  value: 100
+- path: "logging.tags"
+  action: "append"
+  value: "got10k"
+- path: "name"
+  action: "append"
+  value: "-got10k"

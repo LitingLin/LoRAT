@@ -1,0 +1,2 @@
+- path: "run.data.eval.batch_size"
+  value: 32

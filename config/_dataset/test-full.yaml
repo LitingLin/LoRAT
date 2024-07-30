@@ -1,0 +1,38 @@
+filters:
+  - type: "data_cleaning.annotation_standard"
+    parameters:
+      bounding_box_format: "XYXY"
+      bounding_box_coordinate_system: "Continuous"
+
+datasets:
+  - name: "GOT10k"
+    type: "SOT"
+    splits:
+      - "test"
+
+  - name: "LaSOT"
+    type: "SOT"
+    splits:
+      - "test"
+
+  - name: "LaSOT_Extension"
+    type: "SOT"
+
+  - name: "TrackingNet"
+    type: "SOT"
+    splits:
+      - "test"
+
+  - name: "TNL2K"
+    type: "SOT"
+    splits:
+      - "test"
+
+  - name: "UAV123"
+    type: "SOT"
+
+  - name: "OTB"
+    type: "SOT"
+
+  - name: "NFS"
+    type: "SOT"

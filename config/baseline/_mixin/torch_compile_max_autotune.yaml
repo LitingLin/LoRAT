@@ -1,0 +1,5 @@
+- path: "run.runner.train.torch_compile"
+  value:
+    enabled: true
+    parameters:
+      mode: "max-autotune"
