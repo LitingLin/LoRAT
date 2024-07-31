@@ -10,3 +10,4 @@ exifread
 pyzmq
 safetensors
 psutil
+pyturbojpeg
