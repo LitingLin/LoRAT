@@ -52,7 +52,7 @@ class OSTrackConvHead(nn.Module):
                 x (torch.Tensor): (B, H * W, C) input feature map
             Returns:
                 Dict: {
-                    'cls_score' (torch.Tensor): (B, 1, H, W)
+                    'score_map' (torch.Tensor): (B, 1, H, W)
                     'bbox' (torch.Tensor): (B, H, W, 4)
                 }
         '''
