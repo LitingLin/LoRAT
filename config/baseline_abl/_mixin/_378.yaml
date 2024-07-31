@@ -20,5 +20,5 @@
   - "run.data.train.transform.SiamFC_cropping.search_region.area_factor"
   - "run.data.val.transform.SiamFC_cropping.search_region.area_factor"
   value: 5.
-- path: "run.runner.test.evaluator.pipeline.curation_parameter_provider.search_area_factor"
+- path: "run.runner.test.evaluator.pipeline.search_region_cropping.area_factor"
   value: 5.
