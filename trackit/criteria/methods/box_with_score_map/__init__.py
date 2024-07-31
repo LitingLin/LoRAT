@@ -38,7 +38,7 @@ class SimpleCriteria(nn.Module):
         # shape: (num_positive_samples, )
         positive_sample_feature_map_dim_index = targets['positive_sample_map_dim_indices']
 
-        has_positive_samples = positive_sample_batch_dim_index.numel() > 0
+        has_positive_samples = positive_sample_batch_dim_index is not None
 
         if has_positive_samples:
             predicted_bboxes = predicted_bboxes.view(N, H * W, 4)
