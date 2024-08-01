@@ -35,9 +35,9 @@ def build_siamese_tracker_training_data_processing_components(transform_config: 
     interpolation_align_corners = common_config['interpolation_align_corners']
 
     template_siamfc_cropping_parameter = \
-            _build_siamfc_cropping_parameter(transform_config['SiamFC_cropping']['template'],
-                                             common_config['template_size'],
-                                             interpolation_mode, interpolation_align_corners)
+        _build_siamfc_cropping_parameter(transform_config['SiamFC_cropping']['template'],
+                                         common_config['template_size'],
+                                         interpolation_mode, interpolation_align_corners)
 
     search_region_siamfc_cropping_parameter = \
         _build_siamfc_cropping_parameter(transform_config['SiamFC_cropping']['search_region'],

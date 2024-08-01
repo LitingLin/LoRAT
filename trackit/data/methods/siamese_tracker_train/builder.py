@@ -5,8 +5,8 @@ from trackit.data.sampling.per_sequence.builder import build_per_sequence_sample
 from trackit.data.utils.dataloader import build_dataloader
 from trackit.data import DataPipeline
 from trackit.miscellanies.torch.distributed import get_world_size
-from ..common.sampler.siamese.builder import build_SiamFC_training_pair_sampler
 from .worker import SiameseTrackerTrainingDataWorker, SiameseTrackerTrainingDataCollator, SiameseTrackerTrainingHostLoggingHook
+from .siamese_training_pair_sampling.builder import build_SiamFC_training_pair_sampler
 from .transform.builder import build_transform
 
 

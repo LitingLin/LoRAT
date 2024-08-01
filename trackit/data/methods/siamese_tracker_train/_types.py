@@ -1,6 +1,6 @@
 import numpy as np
 from dataclasses import dataclass
-from typing import Callable, Sequence, Optional
+from typing import Callable
 from trackit.data.source import TrackingDataset_Sequence, TrackingDataset_Track, TrackingDataset_FrameInTrack
 
 
@@ -19,4 +19,3 @@ class SiameseTrainingPair:
     is_positive: bool
     template: SOTFrameInfo
     search: SOTFrameInfo
-    aux_frames: Optional[Sequence[SOTFrameInfo]] = None

@@ -1,5 +1,17 @@
-from typing import Sequence, Optional
+from enum import Enum, auto
 from dataclasses import dataclass
+
+
+class SiamesePairSamplingMethod(Enum):
+    interval = auto()
+    causal = auto()
+    reverse_causal = auto()
+
+
+class SiamesePairNegativeSamplingMethod(Enum):
+    random = auto()
+    random_semantic_object = auto()
+    distractor = auto()
 
 
 @dataclass(frozen=True)
@@ -15,4 +27,3 @@ class SiameseTrainingPairSamplingResult:
     z: SamplingResult_Element
     x: SamplingResult_Element
     is_positive: bool
-    aux_frames: Optional[Sequence[SamplingResult_Element]] = None

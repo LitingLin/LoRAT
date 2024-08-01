@@ -9,8 +9,9 @@ class BaseSeed:
     version: int
 
     def __init__(self, name: str, root_path: str,
-                 data_split: Optional[Union[str, Sequence[str]]], supported_data_splits: Tuple[str, ...],
-                 version: int):
+                 data_split: Optional[Union[str, Sequence[str]]] = None,
+                 supported_data_splits: Optional[Tuple[str, ...]] = None,
+                 version: int = 0):
         assert root_path is not None and len(root_path) > 0, 'root_path must be a valid path for dataset {}'.format(name)
         self.name = name
         self.root_path = root_path
@@ -22,7 +23,7 @@ class BaseSeed:
             data_split = tuple(data_split)
         else:
             raise ValueError('data_split must be a string or a sequence of strings')
-        if len(supported_data_splits) == 0:
+        if supported_data_splits is None or len(supported_data_splits) == 0:
             assert len(data_split) == 0, 'data_split must be empty for dataset {}'.format(name)
         else:
             for ds in data_split:

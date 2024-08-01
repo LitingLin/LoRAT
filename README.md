@@ -197,3 +197,16 @@ VOT_TESTS_MULTIOBJECT_PATH: '/path/to/vot_tests_workspace/sequences'
 # Run VOT experiment (vots2024/main stack) on LoRAT-g-378 with SAM-H segmentation model
 python vot_main.py vots2024/main LoRAT dinov2 /path/to/output --mixin giant_378 --mixin segmentify_sam_h --tracker_name LoRAT  --weight_path /path/to/lorat_model_weight.bin
 ```
+
+## Custom Dataset
+[This page](DATASET.md) describes how to create a custom dataset for training and evaluation.
+
+## Citation
+If you find this work useful, please consider citing:
+```bibtex
+@inproceedings{lorat,
+  title={LoRAT: Learning to Refine and Track},
+  author={Lin, Liting and Fan, Heng and Zhang, Zhipeng and Wang, Yaowei and Xu, Yong and Ling, Haibin},
+  booktitle={ECCV},
+  year={2024}
+}

@@ -2,18 +2,16 @@ import numpy as np
 import torch
 from dataclasses import dataclass, field
 
-
 from trackit.core.operator.numpy.bbox.utility.image import bbox_clip_to_image_boundary_
 from trackit.core.operator.numpy.bbox.validity import bbox_is_valid
 from trackit.core.utils.siamfc_cropping import prepare_siamfc_cropping_with_augmentation, apply_siamfc_cropping, \
     apply_siamfc_cropping_to_boxes
-from typing import Optional, Sequence, Mapping, Iterable, Callable
+from typing import Optional, Sequence, Mapping
 from trackit.data.utils.collation_helper import collate_element_as_torch_tensor, collate_element_as_np_array
 from trackit.data.protocol.train_input import TrainData
 from trackit.core.transforms.dataset_norm_stats import get_dataset_norm_stats_transform
 from trackit.data import HostDataPipeline
 from trackit.core.runtime.metric_logger import get_current_metric_logger
-
 
 from ..._types import SiameseTrainingPair, SOTFrameInfo
 from .. import SiameseTrackerTrain_DataTransform
@@ -54,12 +52,9 @@ class SiamTrackerTrainingPairProcessor(SiameseTrackerTrain_DataTransform):
         self.visualize = visualize
 
     def __call__(self, training_pair: SiameseTrainingPair, rng_engine: np.random.Generator):
-        context = {'is_positive': training_pair.is_positive}
-        context['z_bbox'] = training_pair.template.object_bbox
-        context['x_bbox'] = training_pair.search.object_bbox
-        if training_pair.aux_frames is not None:
-            for index, frame in enumerate(training_pair.aux_frames):
-                context[f'aux_{index}_bbox'] = frame.object_bbox
+        context = {'is_positive': training_pair.is_positive,
+                   'z_bbox': training_pair.template.object_bbox,
+                   'x_bbox': training_pair.search.object_bbox}
 
         assert self.template_siamfc_cropping.prepare('z', rng_engine, context)
         if not self.search_region_siamfc_cropping.prepare('x', rng_engine, context):
@@ -97,7 +92,8 @@ class SiamTrackerTrainingPairProcessor(SiameseTrackerTrain_DataTransform):
             from .visualization import visualize_siam_tracker_training_pair_processor
             output_path = get_current_worker_info().get_output_path()
             if output_path is not None:
-                visualize_siam_tracker_training_pair_processor(output_path, training_pair, context, self.norm_stats_dataset_name)
+                visualize_siam_tracker_training_pair_processor(output_path, training_pair, context,
+                                                               self.norm_stats_dataset_name)
 
         return data
 

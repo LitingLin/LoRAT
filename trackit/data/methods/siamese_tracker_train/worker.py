@@ -9,11 +9,10 @@ from trackit.data.context.worker import get_current_worker_info
 from trackit.core.operator.numpy.bbox.format import bbox_cxcywh_to_xyxy
 from trackit.data.utils.frame_decode import get_frame_decoder
 from trackit.data.protocol.train_input import TrainData
-from ..common.sampler.siamese import SamplingResult_Element
 from ... import HostDataPipeline
-from ..common.sampler.siamese.worker import SiamFCTrainingPairSampler
 from ._types import SiameseTrainingPair, SOTFrameInfo
 from .transform import SiameseTrackerTrain_DataTransform
+from .siamese_training_pair_sampling import SamplingResult_Element, SiamFCTrainingPairSampler
 
 
 def _decode(to_decode: SamplingResult_Element, datasets: Sequence[TrackingDataset], rng_engine: np.random.Generator, prefetch: bool):
@@ -49,13 +48,7 @@ def _prepare_siamese_training_pair(global_job_index: int, batch_element_index: i
     cache = {}
     _decode_with_cache('z', training_pair.z, datasets, cache, result, rng_engine, prefetch)
     _decode_with_cache('x', training_pair.x, datasets, cache, result, rng_engine, prefetch)
-    if training_pair.aux_frames is not None:
-        for aux_frame in training_pair.aux_frames:
-            _decode_with_cache(f'aux_{aux_frame.frame_index}', aux_frame, datasets, cache, result, rng_engine, prefetch)
-
-    decoded_training_pair = SiameseTrainingPair(training_pair.is_positive,
-                                                result['z'], result['x'],
-                                                tuple(result[f'aux_{aux_frame.frame_index}'] for aux_frame in training_pair.aux_frames) if training_pair.aux_frames is not None else None)
+    decoded_training_pair = SiameseTrainingPair(training_pair.is_positive, result['z'], result['x'])
 
     # bug check
     if decoded_training_pair.is_positive:

@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple, Union
 from PIL import Image, UnidentifiedImageError
 from tqdm import tqdm
 
@@ -131,9 +131,8 @@ class _DatasetConstructionContext:
         if self.bounding_box_data_type != type_:
             self.bounding_box_data_type = 'mixed'
 
-    def set_bounding_box_format(self, format_):
-        assert isinstance(format_, BoundingBoxFormat)
-        self.bounding_box_format = format_
+    def set_bounding_box_format(self, bounding_box_format: BoundingBoxFormat):
+        self.bounding_box_format = bounding_box_format
 
     def get_processing_bar(self):
         return self.pbar
@@ -295,10 +294,14 @@ class _BaseDatasetConstructor:
         self.dataset['split'] = splits
         self.context.get_processing_bar().set_dataset_split(splits)
 
-    def set_bounding_box_format(self, bounding_box_format: BoundingBoxFormat):
+    def set_bounding_box_format(self, bounding_box_format: Union[BoundingBoxFormat, str]):
+        if isinstance(bounding_box_format, str):
+            bounding_box_format = BoundingBoxFormat[bounding_box_format]
         self.context.set_bounding_box_format(bounding_box_format)
 
-    def set_bounding_box_coordinate_system(self, bounding_box_coordinate_system: BoundingBoxCoordinateSystem):
+    def set_bounding_box_coordinate_system(self, bounding_box_coordinate_system: Union[BoundingBoxCoordinateSystem, str]):
+        if isinstance(bounding_box_coordinate_system, str):
+            bounding_box_coordinate_system = BoundingBoxCoordinateSystem[bounding_box_coordinate_system]  # convert string to enum
         self.context.set_bounding_box_coordinate_system(bounding_box_coordinate_system)
 
 

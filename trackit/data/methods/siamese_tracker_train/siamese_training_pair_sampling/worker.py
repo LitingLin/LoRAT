@@ -3,12 +3,9 @@ import numpy as np
 from trackit.data.source import TrackingDataset
 from trackit.data.sampling.per_sequence import RandomAccessiblePerSequenceSampler
 
-from . import SamplingResult_Element, SiameseTrainingPairSamplingResult
-
 from ._algos import get_random_positive_siamese_training_pair_from_track, _get_random_track, _get_random_frame_from_track
-from ._types import SiamesePairSamplingMethod, SiamesePairNegativeSamplingMethod
+from ._types import SiamesePairSamplingMethod, SiamesePairNegativeSamplingMethod, SamplingResult_Element, SiameseTrainingPairSamplingResult
 from ._distractor import DistractorGenerator
-from .aux_frame_sampling import AuxFrameSampling
 
 
 class SiamFCTrainingPairSampler:
@@ -22,8 +19,7 @@ class SiamFCTrainingPairSampler:
                  siamese_sampling_disable_frame_range_constraint_if_search_frame_not_found: bool,
                  negative_sample_weight: float,
                  negative_sample_generation_methods: Sequence[SiamesePairNegativeSamplingMethod],
-                 negative_sample_generation_method_weights: Optional[np.ndarray],
-                 aux_frame_sampler: Optional[AuxFrameSampling] = None):
+                 negative_sample_generation_method_weights: Optional[np.ndarray]):
         self.datasets = datasets
 
         dataset_weights = np.array(dataset_weights, dtype=np.float64)
@@ -48,7 +44,6 @@ class SiamFCTrainingPairSampler:
                     break
             if distractor_picker_required:
                 self.distractor_pickers = tuple(DistractorGenerator(dataset) for dataset in self.datasets)
-        self.aux_frame_sampler = aux_frame_sampler
 
     def __call__(self, index: Optional[int], rng_engine: np.random.Generator) -> SiameseTrainingPairSamplingResult:
         if index is not None:
@@ -105,6 +100,4 @@ class SiamFCTrainingPairSampler:
                 SamplingResult_Element(dataset_index, sequence_index, track.get_object_id(), frame.get_frame_index()),
                 SamplingResult_Element(x_dataset_index, x_sequence_index, x_track.get_object_id(), x_frame.get_frame_index()),
                 False)
-        if self.aux_frame_sampler is not None:
-            training_pair = self.aux_frame_sampler(training_pair, rng_engine)
         return training_pair

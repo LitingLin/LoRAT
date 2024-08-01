@@ -15,4 +15,3 @@ class BoundingBoxFormat(enum.Enum):
     XYWH = enum.auto()
     XYXY = enum.auto()
     Polygon = enum.auto()
-    CXCYWH = enum.auto()

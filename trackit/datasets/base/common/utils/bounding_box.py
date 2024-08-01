@@ -1,3 +1,8 @@
+from typing import Tuple, Union
+
+import numpy as np
+
+
 def try_get_int_bounding_box(bounding_box):
     dtype = int
     new_bounding_box = []
@@ -23,7 +28,9 @@ def get_bounding_box(object_: dict):
     return bounding_box['value'], bounding_box_validity
 
 
-def set_bounding_box_(object_: dict, bounding_box, validity: bool = None, dtype=None, context=None):
+def set_bounding_box_(object_: dict, bounding_box: Union[Tuple[float, ...], np.ndarray], validity: bool = None, dtype=None, context=None):
+    if isinstance(bounding_box, np.ndarray):
+        bounding_box = bounding_box.tolist()
     if validity is not None:
         assert isinstance(validity, bool)
     if dtype is None:
