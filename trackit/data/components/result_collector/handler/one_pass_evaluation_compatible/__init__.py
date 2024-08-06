@@ -23,9 +23,11 @@ class EvaluationResultPersistenceWithOPEMetricsCompatibleWithExternalTools(Evalu
         self._progress_aware_sub_handler = EvaluationResultPersistenceWithOPEMetrics_ProgressAware(rasterize_bbox)
         self._live_feed_sub_handler = EvaluationResultPersistenceWithOPEMetrics_LiveFeed(rasterize_bbox)
         self._collected_metrics = []
+        self._is_closed = False
 
     def accept(self, evaluation_results: Sequence[SequenceEvaluationResult_SOT],
                evaluation_progresses: Sequence[EvaluationProgress]):
+        assert not self._is_closed
         metrics = {}
         sub_handler_1_metrics = self._progress_aware_sub_handler(self._tracker_name, self._folder_writer, evaluation_results, evaluation_progresses)
         sub_handler_2_metrics = self._live_feed_sub_handler(self._tracker_name, self._folder_writer, evaluation_results, evaluation_progresses)
@@ -37,6 +39,7 @@ class EvaluationResultPersistenceWithOPEMetricsCompatibleWithExternalTools(Evalu
             self._collected_metrics.extend(list(metrics.items()))
 
     def close(self):
+        assert not self._is_closed
         metrics = {}
         sub_handler_1_metrics = self._progress_aware_sub_handler.finalize(self._tracker_name, self._folder_writer)
         sub_handler_2_metrics = self._live_feed_sub_handler.finalize(self._tracker_name, self._folder_writer)
@@ -46,6 +49,10 @@ class EvaluationResultPersistenceWithOPEMetricsCompatibleWithExternalTools(Evalu
             metrics.update(sub_handler_2_metrics)
         if len(metrics) != 0:
             self._collected_metrics.extend(list(metrics.items()))
+        if self._folder_writer is not None:
+            self._folder_writer.close()
+            self._folder_writer = None
+        self._is_closed = True
 
     def get_metrics(self) -> Optional[Sequence[Tuple[str, float]]]:
         return self._collected_metrics

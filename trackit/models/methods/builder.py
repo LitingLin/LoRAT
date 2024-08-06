@@ -12,5 +12,6 @@ def get_model_build_context(config: dict) -> ModelBuildingContext:
     else:
         raise NotImplementedError()
     if isinstance(build_context, nn.Module):
-        build_context = ModelBuildingContext(lambda _: build_context, lambda _: build_context.__class__.__name__, None)
+        model = build_context
+        build_context = ModelBuildingContext(lambda _: model, lambda _: model.__class__.__name__, None)
     return build_context
