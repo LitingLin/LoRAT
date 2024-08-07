@@ -18,5 +18,5 @@ def setup_sweep_argparse():
 
 if __name__ == '__main__':
     args, unknown_args = setup_sweep_argparse().parse_known_args()
-    args.root_path = os.path.dirname(__file__)
+    args.root_path = os.path.dirname(os.path.abspath(__file__))
     sweep_main(args, unknown_args)

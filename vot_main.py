@@ -21,5 +21,5 @@ def setup_arg_parser():
 if __name__ == '__main__':
     parser = setup_arg_parser()
     args = parser.parse_args()
-    args.root_path = os.path.dirname(__file__)
+    args.root_path = os.path.dirname(os.path.abspath(__file__))
     vot_main(args)
