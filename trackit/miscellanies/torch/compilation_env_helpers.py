@@ -146,9 +146,10 @@ def init_extra_build_flags(fast_math=False, lto=True, with_symbols=False, with_m
             ldflags.append('/DEBUG')
         _extra_ldflags = tuple(ldflags)
     else:
-        cflags = ['-O3', '-DNDEBUG', '-march=native', '-ffunction-sections', '-fdata-sections']
+        common_cflags = ['-O3', '-DNDEBUG', '-march=native', '-ffunction-sections', '-fdata-sections']
         if fast_math:
-            cflags.append('-ffast-math')
+            common_cflags.append('-ffast-math')
+        cflags = list(common_cflags)
         if lto:
             cflags.append('-flto')
         if with_symbols:
@@ -158,14 +159,16 @@ def init_extra_build_flags(fast_math=False, lto=True, with_symbols=False, with_m
         ldflags = ['-Wl,--gc-sections']
         if lto:
             ldflags.append('-flto')
-            ldflags.extend(cflags)
+            ldflags.extend(common_cflags)
         if with_symbols:
             ldflags.append('-g')
         _extra_ldflags = tuple(ldflags)
 
         nvcc_flags = ['-O3', '-DNDEBUG']
-        for cflag in cflags:
+        for cflag in common_cflags:
             nvcc_flags += ['-Xcompiler', cflag]
+        if with_symbols:
+            nvcc_flags += ['-Xcompiler', '-g']
         if with_machine_cuda_arch_flags:
             nvcc_flags.extend(get_local_machine_cuda_arch_flags())
         _extra_nvcc_flags = tuple(nvcc_flags)

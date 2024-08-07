@@ -12,9 +12,9 @@ class AutoMixedPrecisionOption:
         dtype = torch.float16
         if 'dtype' in config:
             dtype = config['dtype']
-            if dtype == 'fp16':
+            if dtype == 'float16':
                 dtype = torch.float16
-            elif dtype == 'bf16':
+            elif dtype == 'bfloat16':
                 dtype = torch.bfloat16
             else:
                 raise ValueError('dtype: {} is not supported for auto mixed precision'.format(dtype))
