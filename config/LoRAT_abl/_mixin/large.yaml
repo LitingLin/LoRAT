@@ -12,7 +12,4 @@
   action: "merge"
   value:
     drop_path_rate: 0.1
-- path: "run.runner.train.optimization.optimizer.per_parameter.0.num_layers"
-  value: 24
-- path: "run.runner.train.optimization.optimizer.per_parameter.0.lr_decay_rate"
-  value: 0.8
+

@@ -1,9 +1,12 @@
-import torch.distributed as dist
-from contextlib import contextmanager
 import os
-import torch
 import sys
+
+from contextlib import contextmanager
+from datetime import timedelta
 from typing import Optional
+
+import torch
+import torch.distributed as dist
 
 _dist_enabled: bool = False
 
@@ -111,7 +114,7 @@ def init_torch_distributed(device: str, silent_non_local_master: bool = True, us
 
         aux_dist_backend = 'gloo'
         _log_info('torch.distributed initializing', aux_dist_backend, rank, world_size, local_rank, local_world_size)
-        _group_aux = dist.new_group(backend=aux_dist_backend)
+        _group_aux = dist.new_group(backend=aux_dist_backend, timeout=timedelta(days=1))
         assert _group_aux is not None, 'Failed to create auxiliary process group'
         _log_info('torch.distributed initialized', aux_dist_backend, rank, world_size, local_rank, local_world_size)
 
