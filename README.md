@@ -8,6 +8,7 @@ This is the official repository for **ECCV 2024** [Tracking Meets LoRA: Faster T
 
 [[Models](https://drive.google.com/drive/folders/1FvViP0MCSiAu2FSrNjg7XEORn74yOBdD?usp=sharing)]
 [[Raw Results](https://drive.google.com/drive/folders/1zWlWfpWwBoomaRFNt7rTJlr6UsxfYU1T?usp=sharing)]
+[[Poster](https://raw.githubusercontent.com/wiki/LitingLin/LoRAT/poster.pdf)]
 
 ![banner](https://raw.githubusercontent.com/wiki/LitingLin/LoRAT/images/banner.svg)
 ## Prerequisites
