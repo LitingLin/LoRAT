@@ -19,8 +19,6 @@ print_help() {
     echo "  --sweep_run_times <num>    Number of sweep runs"
     echo "  --sweep_id <id>            Specify sweep ID"
     echo "  --run_id <id>              Specify run ID"
-    echo "  --timm_online              Use timm in online mode (default)"
-    echo "  --timm_offline             Use timm in offline mode"
     echo "  --branch <branch>          Specify git branch"
     echo "  --mixin <config>           Add mixin config"
     echo "  --nnodes <num>             Number of nodes for distributed training"
@@ -32,6 +30,9 @@ print_help() {
     echo "  --enable_ib                Enable InfiniBand (default)"
     echo "  --weight_path <path>       Specify weight path"
     echo "  --checkout <hash>          Checkout specific git commit"
+    echo "  --enable_file_logging      Enable file logging (default)"
+    echo "  --disable_file_logging     Disable file logging"
+    echo "  --enable_profiling         Enable profiling"
 }
 
 if [[ $# -eq 0 ]]; then
@@ -41,13 +42,16 @@ fi
 
 output_dir=""
 
-timm_offline=false
 use_git=false
 pin_memory=true
 wandb_offline=false
 do_sweep=false
-disable_wandb=false
+enable_wandb=true
 disable_ib=false
+disable_file_logging=false
+enable_profiling=false
+debug=false
+multiprocessing_start_method_spawn=false
 
 method_name=$1
 config_name=$2
@@ -66,16 +70,14 @@ while [[ "$#" -gt 0 ]]; do
         --device_ids) device_ids="$2"; shift ;;
         --wandb_offline) wandb_offline=true ;;
         --output_dir) output_dir="$2"; shift ;;
-        --disable_wandb) disable_wandb=true ;;
-        --enable_wandb) disable_wandb=false ;;
+        --disable_wandb) enable_wandb=false ;;
+        --enable_wandb) enable_wandb=true ;;
         --date) DATE_WITH_TIME="$2"; shift ;;
         --do_sweep) do_sweep=true ;;
         --alt_sweep_config) sweep_config_path="${2}"; shift ;;
         --sweep_run_times) sweep_run_times=$2; shift ;;
         --sweep_id) sweep_id="$2"; shift ;;
         --run_id) run_id="$2"; shift ;;
-        --timm_online) timm_offline=false ;;
-        --timm_offline) timm_offline=true ;;
         --branch) git_branch="$2"; shift ;;
         --mixin|--mixin_config) mixin_config+=("$2"); shift ;;
         --nnodes) NUM_NODES=$2; shift ;;
@@ -87,6 +89,10 @@ while [[ "$#" -gt 0 ]]; do
         --enable_ib) disable_ib=false ;;
         --weight_path) weight_paths+=("$2"); shift ;;
         --checkout) git_commit_hash="$2"; shift ;;
+        --disable_file_logging) disable_file_logging=true ;;
+        --enable_file_logging) disable_file_logging=false ;;
+        --enable_profiling) enable_profiling=true ;;
+        --multiprocessing_start_method_spawn) multiprocessing_start_method_spawn=true ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
     shift
@@ -141,18 +147,11 @@ if [[ -z "$run_id" ]]; then
     run_id="$run_id-$DATE_WITH_TIME"
 fi
 
-output_dir="$output_dir/$run_id"
 mkdir -p "$output_dir"
-echo "Output directory: $output_dir"
 
 target_options=("$method_name" "$config_name")
 
 common_options=("--run_id" "$run_id" "--output_dir" "$output_dir")
-
-if [[ "$timm_offline" == true ]]; then
-    export TIMM_USE_OLD_CACHE=1
-    export HF_HUB_OFFLINE=1
-fi
 
 if [[ -n "$instance_id" ]]; then
     common_options+=("--instance_id" "$instance_id")
@@ -166,8 +165,8 @@ fi
 if [[ "$wandb_offline" == true ]]; then
     common_options+=("--wandb_run_offline")
 fi
-if [[ "$disable_wandb" == true ]]; then
-    common_options+=("--disable_wandb")
+if [[ "$enable_wandb" == true ]]; then
+    common_options+=("--enable_wandb")
 fi
 if [[ -n "$NUM_NODES" ]]; then
     common_options+=("--distributed_nnodes" "$NUM_NODES")
@@ -198,21 +197,24 @@ done
 if [[ -n "$resume_file_path" ]]; then
     common_options+=("--resume" "$resume_file_path")
 fi
-
+if [[ "$disable_file_logging" == true ]]; then
+    common_options+=("--disable_file_logging")
+fi
+if [[ "$enable_profiling" == true ]]; then
+    common_options+=("--enable_profiling")
+fi
+if [[ "$multiprocessing_start_method_spawn" == true ]]; then
+    common_options+=("--multiprocessing_start_method_spawn")
+fi
+if [[ "$debug" == true ]]; then
+    common_options+=("--enable_stack_trace_on_error" "--allow_non_master_node_printing")
+fi
 if [[ "$do_sweep" == false ]]; then
-    output_log="$output_dir/train_stdout.log"
-    if [[ -n "$NODE_RANK" ]]; then
-        output_log="$output_dir/train_stdout.$NODE_RANK.log"
-    fi
-    PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 python main.py "${target_options[@]}" "${common_options[@]}" |& tee -a "$output_log"
+    PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 python main.py "${target_options[@]}" "${common_options[@]}"
 else
     if [[ -n "$NUM_NODES" && "$NUM_NODES" -gt 1 ]]; then
         echo "Multi-nodes distributed training currently not support for hyper-parameter tunning"
         exit 1
-    fi
-    output_log="$output_dir/sweep_stdout.log"
-    if [[ -n "$NODE_RANK" ]]; then
-        output_log="$output_dir/sweep_stdout.$NODE_RANK.log"
     fi
     sweep_options=()
     if [[ -n "$sweep_config_path" ]]; then
@@ -225,5 +227,5 @@ else
         sweep_options+=("--agents_run_limit" "$sweep_run_times")
     fi
 
-    PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 python sweep.py "${target_options[@]}" "${sweep_options[@]}" "${common_options[@]}" |& tee -a "$output_log"
+    PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 python sweep.py "${target_options[@]}" "${sweep_options[@]}" "${common_options[@]}"
 fi

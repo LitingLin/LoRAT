@@ -3,7 +3,7 @@ import math
 import torch.nn as nn
 from timm.layers import trunc_normal_
 
-from .merge import _lora_merge, _lora_unmerge
+from .merge import lora_merge, lora_unmerge
 
 # https://github.com/JamesQFreeman/LoRA-ViT/blob/main/lora.py
 # https://github.com/huggingface/peft/blob/main/src/peft/tuners/lora/layer.py
@@ -112,35 +112,35 @@ class LinearWithLoRA(nn.Module):
     def merge(self):
         if self.merged:
             return
-        self.linear.weight.data.copy_(_lora_merge(self.linear.weight.data, self.lora.A, self.lora.B, self.lora.alpha, self.lora.rs_lora))
+        self.linear.weight.data.copy_(lora_merge(self.linear.weight.data, self.lora.A, self.lora.B, self.lora.alpha, self.lora.rs_lora))
         self.merged = True
 
     def unmerge(self):
         if not self.merged:
             return
-        self.linear.weight.data.copy_(_lora_unmerge(self.linear.weight.data, self.lora.A, self.lora.B, self.lora.alpha, self.lora.rs_lora))
+        self.linear.weight.data.copy_(lora_unmerge(self.linear.weight.data, self.lora.A, self.lora.B, self.lora.alpha, self.lora.rs_lora))
         self.merged = False
 
 
-class LinearWithLoRA_TimmQKV(nn.Module):
-    def __init__(self, linear: nn.Linear, r: int, alpha: float, dropout: float, rs_lora: bool = False,
+class LinearWithLoRA_QKVFused(nn.Module):
+    def __init__(self, qkv_linear: nn.Linear, r: int, alpha: float, dropout: float, rs_lora: bool = False,
                  init_method: str = 'bert',
                  target_q: bool = True, target_k: bool = True, target_v: bool = True):
         super().__init__()
-        dim = linear.in_features
-        bias = linear.bias is not None
-        q = nn.Linear(dim, dim, bias, device=linear.weight.device, dtype=linear.weight.dtype)
-        k = nn.Linear(dim, dim, bias, device=linear.weight.device, dtype=linear.weight.dtype)
-        v = nn.Linear(dim, dim, bias, device=linear.weight.device, dtype=linear.weight.dtype)
-        q.weight.data.copy_(linear.weight.data[:dim])
-        k.weight.data.copy_(linear.weight.data[dim:2*dim])
-        v.weight.data.copy_(linear.weight.data[2*dim:])
-        q.weight.requires_grad = k.weight.requires_grad = v.weight.requires_grad = linear.weight.requires_grad
+        dim = qkv_linear.in_features
+        bias = qkv_linear.bias is not None
+        q = nn.Linear(dim, dim, bias, device=qkv_linear.weight.device, dtype=qkv_linear.weight.dtype)
+        k = nn.Linear(dim, dim, bias, device=qkv_linear.weight.device, dtype=qkv_linear.weight.dtype)
+        v = nn.Linear(dim, dim, bias, device=qkv_linear.weight.device, dtype=qkv_linear.weight.dtype)
+        q.weight.data.copy_(qkv_linear.weight.data[:dim])
+        k.weight.data.copy_(qkv_linear.weight.data[dim:2 * dim])
+        v.weight.data.copy_(qkv_linear.weight.data[2 * dim:])
+        q.weight.requires_grad = k.weight.requires_grad = v.weight.requires_grad = qkv_linear.weight.requires_grad
         if bias:
-            q.bias.data.copy_(linear.bias.data[:dim])
-            k.bias.data.copy_(linear.bias.data[dim:2*dim])
-            v.bias.data.copy_(linear.bias.data[2*dim:])
-            q.bias.requires_grad = k.bias.requires_grad = v.bias.requires_grad = linear.bias.requires_grad
+            q.bias.data.copy_(qkv_linear.bias.data[:dim])
+            k.bias.data.copy_(qkv_linear.bias.data[dim:2 * dim])
+            v.bias.data.copy_(qkv_linear.bias.data[2 * dim:])
+            q.bias.requires_grad = k.bias.requires_grad = v.bias.requires_grad = qkv_linear.bias.requires_grad
 
         if target_q:
             self.q = LinearWithLoRA(q, r, alpha, dropout, rs_lora, init_method)
@@ -160,3 +160,35 @@ class LinearWithLoRA_TimmQKV(nn.Module):
         k = self.k(x)
         v = self.v(x)
         return torch.cat((q, k, v), dim=-1)
+
+
+class LinearWithLoRA_KVFused(nn.Module):
+    def __init__(self, kv_linear: nn.Linear, r: int, alpha: float, dropout: float, rs_lora: bool = False,
+                 init_method: str = 'bert',
+                 target_k: bool = True, target_v: bool = True):
+        super().__init__()
+        dim = kv_linear.in_features
+        bias = kv_linear.bias is not None
+        k = nn.Linear(dim, dim, bias, device=kv_linear.weight.device, dtype=kv_linear.weight.dtype)
+        v = nn.Linear(dim, dim, bias, device=kv_linear.weight.device, dtype=kv_linear.weight.dtype)
+        k.weight.data.copy_(kv_linear.weight.data[:dim])
+        v.weight.data.copy_(kv_linear.weight.data[dim:2 * dim])
+        k.weight.requires_grad = v.weight.requires_grad = kv_linear.weight.requires_grad
+        if bias:
+            k.bias.data.copy_(kv_linear.bias.data[:dim])
+            v.bias.data.copy_(kv_linear.bias.data[dim:2 * dim])
+            k.bias.requires_grad = v.bias.requires_grad = kv_linear.bias.requires_grad
+
+        if target_k:
+            self.k = LinearWithLoRA(k, r, alpha, dropout, rs_lora, init_method)
+        else:
+            self.k = k
+        if target_v:
+            self.v = LinearWithLoRA(v, r, alpha, dropout, rs_lora, init_method)
+        else:
+            self.v = v
+
+    def forward(self, x: torch.Tensor):
+        k = self.k(x)
+        v = self.v(x)
+        return torch.cat((k, v), dim=-1)

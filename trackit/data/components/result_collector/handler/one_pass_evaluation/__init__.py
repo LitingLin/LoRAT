@@ -49,7 +49,7 @@ class EvaluationResultPersistenceWithOPEMetrics(EvaluationResultHandler):
             self._collected_metrics.extend(list(metrics.items()))
         if self._folder_writer is not None:
             self._folder_writer.close()
-            self._folder_writer = None
+            del self._folder_writer
         self._is_closed = True
 
     def get_metrics(self) -> Optional[Sequence[Tuple[str, float]]]:
@@ -74,10 +74,10 @@ class FinalOPEMetricsSummaryReportGenerator:
 
 
 def __get_summary_metric_name(metric_name: str, dataset_name: str, repeat_index: Optional[int]):
-    if repeat_index is None:
-        return f'{metric_name}_{dataset_name}'
-    else:
-        return f'{metric_name}_{dataset_name}_{repeat_index:03d}'
+    summary_metric_name = f'{metric_name}_{dataset_name}'
+    if repeat_index is not None:
+        summary_metric_name += f'_{repeat_index:03d}'
+    return summary_metric_name
 
 
 def _generate_dataset_summary_metrics_name_value_pair(dataset_name: str, repeat_index: Optional[int], metrics: OPEMetrics):

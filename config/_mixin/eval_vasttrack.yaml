@@ -1,0 +1,12 @@
+!concat
+- !include "evaluation.yaml"
+- - path: "run.data.eval.source.parameters"
+    value: !include "../_dataset/test-vasttrack.yaml"
+  - path: "run.data.eval.result_collector.dispatch"
+    value:
+      - match:
+          name_regex: ".*"
+        handlers:
+          - type: "one_pass_evaluation_compatible"
+          - type: "external/PyTracking"
+            file_name: "vasttrack_results"

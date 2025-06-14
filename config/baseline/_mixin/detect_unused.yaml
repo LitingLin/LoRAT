@@ -1,0 +1,2 @@
+- path: "run.runner.train.detect_unused_parameters"
+  value: true

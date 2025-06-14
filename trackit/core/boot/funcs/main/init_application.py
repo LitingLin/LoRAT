@@ -1,11 +1,9 @@
 import numpy as np
-import torch
 
 from trackit.miscellanies.torch.distributed import get_rank
 from trackit.core.runtime.application.builder import build_application
-from trackit.core.runtime.global_constant import get_global_constant
 
-from ...workarounds.reproducibility import seed_all_rng
+from ..utils.reproducibility import seed_all_rng
 
 
 def prepare_application(runtime_vars, config, wandb_instance):

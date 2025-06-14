@@ -46,7 +46,7 @@ class ConvAnchorFreeHead(nn.Module):
                 x (torch.Tensor): (B, H * W, C) input feature map
             Returns:
                 Dict: {
-                    'score_map' (torch.Tensor): (B, 1, H, W)
+                    'score_map' (torch.Tensor): (B, H, W)
                     'bbox' (torch.Tensor): (B, H, W, 4)
                 }
         '''
@@ -55,7 +55,7 @@ class ConvAnchorFreeHead(nn.Module):
 
         B = x.shape[0]
 
-        x = x.view(B, H, W, -1).permute(0, 3, 1, 2)
+        x = x.view(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
 
         score_map = self.cls(x).to(torch.float32)
         box_map = self.reg(x).to(torch.float32)

@@ -1,13 +1,14 @@
 from typing import Tuple
 import numpy as np
+import torch
 from timm.layers import to_2tuple
 
 from trackit.core.runtime.build_context import BuildContext
-from trackit.miscellanies.pretty_format import pretty_format
+from trackit.miscellanies.printing import pretty_format
 from .plugin.builder import build_plugins
 from .augmentation.builder import build_augmentation_pipeline
 from .processor import SiamTrackerTrainingPairProcessor, SiamTrackerTrainingPairProcessorBatchCollator, \
-    SiamTrackerTrainingPairProcessorHostLoggingHook, SiamFCCroppingParameter
+    SiamTrackerTrainingPairProcessorMainProcessLoggingHook, SiamFCCroppingParameter
 
 
 def _build_siamfc_cropping_parameter(siamfc_cropping_config: dict, output_size: Tuple[int, int],
@@ -26,9 +27,10 @@ def _build_siamfc_cropping_parameter(siamfc_cropping_config: dict, output_size: 
                                    interpolation_mode, interpolation_align_corners)
 
 
-def build_siamese_tracker_training_data_processing_components(transform_config: dict, config: dict, build_context: BuildContext):
-    additional_processors, additional_data_collators, additional_host_data_pipelines = (
-        build_plugins(transform_config, config, build_context))
+def build_siamese_tracker_training_data_processing_components(transform_config: dict, config: dict,
+                                                              build_context: BuildContext, dtype: torch.dtype):
+    additional_processors, additional_data_collators, additional_data_pipelines_on_main_process = (
+        build_plugins(transform_config, config, build_context, dtype))
 
     common_config = config['common']
     interpolation_mode = common_config['interpolation_mode']
@@ -44,15 +46,20 @@ def build_siamese_tracker_training_data_processing_components(transform_config: 
                                          common_config['search_region_size'],
                                          interpolation_mode, interpolation_align_corners)
 
+    augmentation_pipeline = build_augmentation_pipeline(transform_config['augmentation'])
+    if 'static_image_augmentation' in transform_config:
+        static_image_augmentation_pipeline = build_augmentation_pipeline(transform_config['static_image_augmentation'])
+    else:
+        static_image_augmentation_pipeline = augmentation_pipeline
     processor = SiamTrackerTrainingPairProcessor(
         template_siamfc_cropping_parameter,
         search_region_siamfc_cropping_parameter,
-        build_augmentation_pipeline(transform_config['augmentation']),
+        augmentation_pipeline, static_image_augmentation_pipeline,
         common_config['normalization'],
         additional_processors,
         transform_config.get('visualize', False))
 
-    batch_collator = SiamTrackerTrainingPairProcessorBatchCollator(additional_data_collators)
-    print('transform config:\n', pretty_format(transform_config))
+    batch_collator = SiamTrackerTrainingPairProcessorBatchCollator(dtype, additional_data_collators)
+    print('transform config:\n' + pretty_format(transform_config, indent_level=1))
     return processor, batch_collator, (
-        SiamTrackerTrainingPairProcessorHostLoggingHook(), *additional_host_data_pipelines)
+        SiamTrackerTrainingPairProcessorMainProcessLoggingHook(), *additional_data_pipelines_on_main_process)

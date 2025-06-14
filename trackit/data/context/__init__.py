@@ -1,11 +1,13 @@
+import torch
 from dataclasses import dataclass
-from typing import Optional, Mapping
+from typing import Optional, Mapping, Any
 
 
 @dataclass
 class DataContext:
     name: str
-    variables: Mapping
+    variables: Mapping[str, Any]
+    dtype: torch.dtype
 
 
 __data_context: Optional[DataContext] = None

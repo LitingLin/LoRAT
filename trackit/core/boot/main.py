@@ -1,7 +1,7 @@
 import os.path
 
-from .workarounds.debugging import enable_stack_trace_on_error
-from .workarounds.numpy import numpy_no_multithreading
+from .funcs.utils.debugging import enable_stack_trace_on_error, enable_rich_logging, enable_strict_numeric_error_handling
+from .funcs.utils.disable_multithreading import disable_multithreading
 from .funcs.main.load_config import load_config
 from .funcs.main.init_global_context import init_global_context
 from .funcs.main.init_application import prepare_application
@@ -34,11 +34,15 @@ def main(runtime_vars):
         runtime_vars.instance_id = string_to_int_sha256(runtime_vars.run_id)
 
     if runtime_vars.distributed_do_spawn_workers:
+        if runtime_vars.device != 'cpu':
+            disable_multithreading()
         from .funcs.main.torch_distributed_do_spawn_workers import spawn_workers
         return spawn_workers(runtime_vars)
 
-    numpy_no_multithreading()
-    # opencv_no_multithreading()
+    enable_strict_numeric_error_handling()
+
+    if runtime_vars.enable_rich_logging:
+        enable_rich_logging()
     if runtime_vars.enable_stack_trace_on_error:
         enable_stack_trace_on_error()
     _remove_ddp_parameter(runtime_vars)

@@ -7,11 +7,13 @@ from trackit.datasets.base.common.constructor import image_dataset_key_exclude_l
 
 
 def construct_image_classification_dataset_memory_mapped_from_base_image_dataset(base_dataset: dict, path: str):
-    constructor, bounding_box_data_type = memory_mapped_constructor_common_preliminary_works(base_dataset, 'image',
-                                                                                             path,
-                                                                                             CLS_dataset.__version__,
-                                                                                             'ImageClassification',
-                                                                                             image_dataset_key_exclude_list)
+    constructor, bounding_box_data_type = memory_mapped_constructor_common_preliminary_works(
+        base_dataset, 'image',
+        path,
+        CLS_dataset.__version__,
+        'ImageClassification',
+        image_dataset_key_exclude_list)
+
     images_list = []
 
     for base_image in base_dataset['images']:

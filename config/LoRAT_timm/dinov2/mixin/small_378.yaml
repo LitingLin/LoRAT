@@ -1,0 +1,5 @@
+!concat
+- !include "small.yaml"
+- !include "_378.yaml"
+- - path: "name"
+    value: "DINOv2/S-378"

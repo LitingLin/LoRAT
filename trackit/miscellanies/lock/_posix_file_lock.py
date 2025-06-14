@@ -1,7 +1,7 @@
 import os
 import tempfile
 import fcntl
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 import signal, errno
 
 

@@ -1,6 +1,6 @@
 # modify from https://github.com/visionml/pytracking/blob/master/pytracking/analysis/extract_results.py
 from dataclasses import dataclass
-from typing import Optional, Tuple, Sequence
+from typing import Optional, Sequence
 import numpy as np
 from trackit.miscellanies.numpy_array_builder import NumpyArrayBuilder
 from trackit.core.operator.numpy.bbox.format import bbox_xyxy_to_xywh
@@ -21,27 +21,29 @@ _success_rate_at_overlap_0_75_bin_index = np.where(_threshold_set_overlap == 0.7
 
 
 def calc_err_center(pred_bb: np.ndarray, anno_bb: np.ndarray, normalized: bool=False):
-    pred_center = pred_bb[:, :2] + 0.5 * (pred_bb[:, 2:] - 1.0)
-    anno_center = anno_bb[:, :2] + 0.5 * (anno_bb[:, 2:] - 1.0)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        pred_center = pred_bb[:, :2] + 0.5 * (pred_bb[:, 2:] - 1.0)
+        anno_center = anno_bb[:, :2] + 0.5 * (anno_bb[:, 2:] - 1.0)
 
-    if normalized:
-        pred_center = pred_center / anno_bb[:, 2:]
-        anno_center = anno_center / anno_bb[:, 2:]
+        if normalized:
+            pred_center = pred_center / anno_bb[:, 2:]
+            anno_center = anno_center / anno_bb[:, 2:]
 
-    err_center = np.sqrt(((pred_center - anno_center)**2).sum(1))
-    return err_center
+        err_center = np.sqrt(((pred_center - anno_center)**2).sum(1))
+        return err_center
 
 
 def calc_iou_overlap(pred_bb: np.ndarray, anno_bb: np.ndarray):
-    tl = np.maximum(pred_bb[:, :2], anno_bb[:, :2])
-    br = np.minimum(pred_bb[:, :2] + pred_bb[:, 2:] - 1.0, anno_bb[:, :2] + anno_bb[:, 2:] - 1.0)
-    sz = (br - tl + 1.0).clip(min=0)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        tl = np.maximum(pred_bb[:, :2], anno_bb[:, :2])
+        br = np.minimum(pred_bb[:, :2] + pred_bb[:, 2:] - 1.0, anno_bb[:, :2] + anno_bb[:, 2:] - 1.0)
+        sz = (br - tl + 1.0).clip(min=0)
 
-    # Area
-    intersection = sz.prod(axis=1)
-    union = pred_bb[:, 2:].prod(axis=1) + anno_bb[:, 2:].prod(axis=1) - intersection
+        # Area
+        intersection = sz.prod(axis=1)
+        union = pred_bb[:, 2:].prod(axis=1) + anno_bb[:, 2:].prod(axis=1) - intersection
 
-    return intersection / union
+        return intersection / union
 
 
 def calc_seq_err_robust(dataset_name: str, pred_bb: np.ndarray, anno_bb: np.ndarray, target_visible: Optional[np.ndarray]=None, stark_behavior:bool=True):
@@ -84,7 +86,7 @@ def compute_one_pass_evaluation_metrics(dataset_name: str, pred_bb: np.ndarray, 
     err_overlap, err_center, err_center_normalized, valid_frame = calc_seq_err_robust(dataset_name, pred_bb, anno_bb, target_visible, stark_behavior)
 
     if exclude_invalid_frames:
-        seq_length = valid_frame.long().sum()
+        seq_length = valid_frame.astype(np.int32).sum()
     else:
         seq_length = anno_bb.shape[0]
 
@@ -107,11 +109,11 @@ class OPEMetrics:
 
     @property
     def precision_score(self) -> float:
-        return self.precision_curve[20].item()
+        return self.precision_curve[_precision_score_bin_index].item()
 
     @property
     def normalized_precision_score(self) -> float:
-        return self.normalized_precision_curve[20].item()
+        return self.normalized_precision_curve[_precision_score_bin_index].item()
 
     @property
     def success_rate_at_overlap_0_5(self) -> float:
@@ -135,7 +137,7 @@ def compute_OPE_metrics_mean(metrics: Sequence[OPEMetrics]) -> OPEMetrics:
 
 
 @dataclass(frozen=True)
-class DatasetOPEMetricsList:
+class DatasetOPEResults:
     sequence_name: Sequence[str]
     success_curve: np.ndarray
     precision_curve: np.ndarray
@@ -149,10 +151,17 @@ class DatasetOPEMetricsList:
     def __len__(self):
         return len(self.sequence_name)
 
+    def filter_sequences(self, mask: np.ndarray):
+        return DatasetOPEResults(tuple(self.sequence_name[index] for index, bit in enumerate(mask) if bit),
+                                 self.success_curve[mask],
+                                 self.precision_curve[mask],
+                                 self.normalized_precision_curve[mask],
+                                 self.time_cost[mask])
+
     def sort_by_sequence_name(self):
         sorted_indices = np.array(argsort(self.sequence_name))
 
-        return DatasetOPEMetricsList(
+        return DatasetOPEResults(
             tuple(self.sequence_name[index] for index in sorted_indices),
             self.success_curve[sorted_indices],
             self.precision_curve[sorted_indices],
@@ -175,7 +184,7 @@ class DatasetOPEMetricsList:
         return self.normalized_precision_curve[:, _precision_score_bin_index]
 
 
-class DatasetOPEMetricsListBuilder:
+class DatasetOPEResultsBuilder:
     def __init__(self):
         self._sequence_name = []
         self._average_overlap = NumpyArrayBuilder(np.float64)
@@ -186,7 +195,7 @@ class DatasetOPEMetricsListBuilder:
         self._norm_precision_curve = NumpyArrayBuilder(np.float64, extra_dims=(_bins_of_center_location_error,))
         self._average_time_cost = NumpyArrayBuilder(np.float64)
 
-    def append(self, sequence_name: str, metrics: OPEMetrics):
+    def add_sequence(self, sequence_name: str, metrics: OPEMetrics):
         self._sequence_name.append(sequence_name)
         self._success_curve.append(metrics.success_curve)
         self._precision_curve.append(metrics.precision_curve)
@@ -194,6 +203,6 @@ class DatasetOPEMetricsListBuilder:
         self._average_time_cost.append(metrics.time_cost)
 
     def build(self):
-        return DatasetOPEMetricsList(self._sequence_name, self._success_curve.build(),
-                                     self._precision_curve.build(), self._norm_precision_curve.build(),
-                                     self._average_time_cost.build())
+        return DatasetOPEResults(self._sequence_name, self._success_curve.build(),
+                                 self._precision_curve.build(), self._norm_precision_curve.build(),
+                                 self._average_time_cost.build())

@@ -1,0 +1,9 @@
+filters:
+  - type: "data_cleaning.annotation_standard"
+    parameters:
+      bounding_box_format: "XYXY"
+      bounding_box_coordinate_system: "Continuous"
+
+datasets:
+  - name: "LaSOT_Extension"
+    type: "SOT"

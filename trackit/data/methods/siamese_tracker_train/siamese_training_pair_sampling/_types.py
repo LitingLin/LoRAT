@@ -11,7 +11,6 @@ class SiamesePairSamplingMethod(Enum):
 class SiamesePairNegativeSamplingMethod(Enum):
     random = auto()
     random_semantic_object = auto()
-    distractor = auto()
 
 
 @dataclass(frozen=True)

@@ -1,4 +1,4 @@
-from typing import Sequence, Optional
+from typing import Optional
 import numpy as np
 import copy
 
@@ -24,7 +24,7 @@ class RandomSequencePicker:
         self.shuffle()
 
     def shuffle(self):
-        self._last_rng_state = self.rng_engine.__getstate__()
+        self._last_rng_state = self.rng_engine.bit_generator.state
         dataset_indices = []
         sequence_indices = []
         for index, (dataset_num_sequences, dataset_sampled_size) in enumerate(zip(self.dataset_lengths, self.dataset_sampled_size_list)):
@@ -52,8 +52,10 @@ class RandomSequencePicker:
         return self.dataset_indices[index], self.sequence_indices[index]
 
     def get_state(self):
+        assert isinstance(self._last_rng_state, dict), f"Expected dict, got {type(self._last_rng_state)}. value:\n{str(self._last_rng_state)}"
         return self._last_rng_state
 
     def set_state(self, rng_state):
-        self.rng_engine.__setstate__(rng_state)
+        assert isinstance(rng_state, dict), f"Expected dict, got {type(rng_state)}. value:\n{str(rng_state)}"
+        self.rng_engine.bit_generator.state = rng_state
         self.shuffle()

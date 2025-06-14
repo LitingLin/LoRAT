@@ -13,17 +13,19 @@ class NFS_Seed(BaseSeed):
             root_path = self.get_path_from_config('NFS_PATH')
         if isinstance(version, str):
             version = NFSDatasetVersionFlag[version]
+        flags = []
         if version == NFSDatasetVersionFlag.fps_30:
-            name = 'NFS-fps_30'
+            flags.append('fps_30')
         elif version == NFSDatasetVersionFlag.fps_240:
-            name = 'NFS-fps_240'
+            flags.append('fps_240')
         else:
             raise Exception
+
         if manual_anno_only:
-            name += '-no_generated'
+            flags.append('no_generated')
         self.nfs_version = version
         self.manual_anno_only = manual_anno_only
-        super().__init__(name, root_path, None, (), 1)
+        super().__init__('NFS', root_path, extra_flags=flags)
 
     def construct(self, constructor):
         from .Impl.NFS import construct_NFS

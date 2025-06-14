@@ -2,7 +2,7 @@ from typing import Dict, Iterable, Tuple
 from trackit.core.runtime.context.epoch import EpochContext, set_current_epoch_context
 from trackit.core.runtime.context.task import TaskContext, set_current_task_context
 from trackit.data.context import DataContext, set_current_data_context
-from trackit.runner.context import set_current_runner_context, RunnerContext
+from trackit.runners.context import set_current_runner_context, RunnerContext
 
 
 class GlobalContextManager:

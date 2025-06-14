@@ -45,10 +45,12 @@ def get_current_worker_info() -> Optional[WorkerInfo]:
     return __worker_info
 
 
-def _set_worker_info(worker_id: int, num_local_workers: int, rank: int, world_size: int, epoch: int, is_train: bool, seed: int, in_background_process: bool, output_path: Optional[str]):
+def _set_worker_info(worker_id: int, num_local_workers: int, rank: int, world_size: int, epoch: int, is_train: bool,
+                     seed: int, in_background_process: bool, output_path: Optional[str]):
     rng_seed = np.random.SeedSequence((seed, rank, worker_id, epoch, int(is_train)))
     global __worker_info
-    __worker_info = WorkerInfo(worker_id, num_local_workers, rank, world_size, epoch, is_train, rng_seed, in_background_process, output_path)
+    __worker_info = WorkerInfo(worker_id, num_local_workers, rank, world_size, epoch, is_train, rng_seed,
+                               in_background_process, output_path)
 
 
 def _unset_worker_info():
@@ -57,7 +59,7 @@ def _unset_worker_info():
 
 
 class WorkerInfoInitializer:
-    def __init__(self, rank: int, seed: int, num_local_workers: int, world_size: int, in_background_process):
+    def __init__(self, rank: int, seed: int, num_local_workers: int, world_size: int, in_background_process: bool):
         assert num_local_workers > 0
         self._epoch = 0
         self._rank = rank
@@ -72,10 +74,12 @@ class WorkerInfoInitializer:
         self._is_train = is_train
         self._output_path = get_current_epoch_context().get_current_epoch_output_path(create_if_not_exists=False)
         if not self._in_background_process:
-            _set_worker_info(0, self._num_local_workers, self._rank, self._world_size, self._epoch, self._is_train, self._seed, self._in_background_process, self._output_path)
+            _set_worker_info(0, self._num_local_workers, self._rank, self._world_size, self._epoch,
+                             self._is_train, self._seed, self._in_background_process, self._output_path)
 
     def worker_init_fn(self, worker_id: int):
-        _set_worker_info(worker_id, self._num_local_workers, self._rank, self._world_size, self._epoch, self._is_train, self._seed, self._in_background_process, self._output_path)
+        _set_worker_info(worker_id, self._num_local_workers, self._rank, self._world_size, self._epoch,
+                         self._is_train, self._seed, self._in_background_process, self._output_path)
 
     def on_epoch_end(self, epoch: int, is_train: bool):
         assert self._epoch == epoch and self._is_train == is_train

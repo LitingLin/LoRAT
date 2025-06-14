@@ -2,7 +2,6 @@ import numpy as np
 from typing import Sequence
 from trackit.data.sampling.per_sequence import RandomAccessiblePerSequenceSampler
 from trackit.data.source import TrackingDataset
-from trackit.miscellanies.pretty_format import pretty_format
 from .worker import SiamFCTrainingPairSampler
 from ._types import SiamesePairSamplingMethod, SiamesePairNegativeSamplingMethod
 
@@ -10,11 +9,11 @@ from ._types import SiamesePairSamplingMethod, SiamesePairNegativeSamplingMethod
 def build_SiamFC_training_pair_sampler(datasets: Sequence[TrackingDataset], datasets_sampling_weight: np.ndarray,
                                        sequence_picker: RandomAccessiblePerSequenceSampler,
                                        siamese_sampling_config: dict):
-    print('Siamese training pair sampling:\n' + pretty_format(siamese_sampling_config))
     # positive training pair sampling
     positive_sample_config = siamese_sampling_config['positive_sample']
     siamese_sampling_method = SiamesePairSamplingMethod[positive_sample_config['sample_mode']]
     siamese_sampling_frame_range = positive_sample_config['max_gaps']
+    siamese_sampling_frame_range_adjust_according_to_sequence_fps = positive_sample_config.get('max_gaps_adjust_according_to_sequence_fps', False)
     if 'auto_extend' in positive_sample_config:
         siamese_sampling_frame_range_auto_extend_step = positive_sample_config['auto_extend']['step']
         siamese_sampling_frame_range_auto_extend_max_retry_count = positive_sample_config['auto_extend']['max_retry_count']
@@ -44,6 +43,7 @@ def build_SiamFC_training_pair_sampler(datasets: Sequence[TrackingDataset], data
 
     return SiamFCTrainingPairSampler(datasets, datasets_sampling_weight, sequence_picker,
                                      siamese_sampling_frame_range=siamese_sampling_frame_range,
+                                     siamese_sampling_frame_range_adjust_according_to_sequence_fps=siamese_sampling_frame_range_adjust_according_to_sequence_fps,
                                      siamese_sampling_method=siamese_sampling_method,
                                      siamese_sampling_frame_range_auto_extend_step=siamese_sampling_frame_range_auto_extend_step,
                                      siamese_sampling_frame_range_auto_extend_max_retry_count=siamese_sampling_frame_range_auto_extend_max_retry_count,

@@ -9,8 +9,10 @@ def construct_wandb_metric_logger(logger_dispatcher: MetricLogger, logging_confi
     assert wandb_instance is not None
     if logging_config is None:
         logger = WandbLogger(wandb_instance, 1)
-        build_context.services.event.register_on_epoch_begin_event_listener(lambda epoch, is_train: logger.on_epoch_begin(epoch))
-        build_context.services.event.register_on_epoch_end_event_listener(lambda epoch, is_train: logger.on_epoch_end())
+        build_context.services.event.register_on_epoch_begin_event_listener(
+            lambda epoch, is_train: logger.on_epoch_begin(epoch))
+        build_context.services.event.register_on_epoch_end_event_listener(
+            lambda epoch, is_train: logger.on_epoch_end())
         logger_dispatcher.register_logger('wandb', logger, 'external')
     enable_per_iteration_logging = True
     enable_per_epoch_logging = False
@@ -50,11 +52,15 @@ def construct_wandb_metric_logger(logger_dispatcher: MetricLogger, logging_confi
 
     if enable_per_iteration_logging:
         logger = WandbLogger(wandb_instance, logging_interval, per_iteration_logging_prefix, with_epoch)
-        build_context.services.event.register_on_epoch_begin_event_listener(lambda epoch, is_train: logger.on_epoch_begin(epoch))
-        build_context.services.event.register_on_epoch_end_event_listener(lambda epoch, is_train: logger.on_epoch_end())
+        build_context.services.event.register_on_epoch_begin_event_listener(
+            lambda epoch, is_train: logger.on_epoch_begin(epoch))
+        build_context.services.event.register_on_epoch_end_event_listener(
+            lambda epoch, is_train: logger.on_epoch_end())
         logger_dispatcher.register_logger('wandb', logger, 'external')
     if enable_per_epoch_logging:
         logger = WandbEpochSummaryLogger(wandb_instance, per_epoch_logging_summary_method, per_epoch_logging_prefix, with_epoch)
-        build_context.services.event.register_on_epoch_begin_event_listener(lambda epoch, is_train: logger.on_epoch_begin(epoch))
-        build_context.services.event.register_on_epoch_end_event_listener(lambda epoch, is_train: logger.on_epoch_end(epoch))
+        build_context.services.event.register_on_epoch_begin_event_listener(
+            lambda epoch, is_train: logger.on_epoch_begin(epoch))
+        build_context.services.event.register_on_epoch_end_event_listener(
+            lambda epoch, is_train: logger.on_epoch_end(epoch))
         logger_dispatcher.register_logger('wandb_epoch_summary', logger, 'external')

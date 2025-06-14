@@ -17,14 +17,15 @@ def vot_main(args):
 
     vot_run_command = [sys.executable, os.path.join(args.root_path, 'main.py'), args.method_name, args.config_name,
                        '--device', args.device, '--disable_wandb', '--quiet',
+                       '--run_id', args.run_id,
                        '--output_dir', os.path.join(args.output_path, 'output')]
+    if not args.enable_file_logging:
+        vot_run_command.append('--disable_file_logging')
     if args.mixin_config is not None:
         for mixin_config in args.mixin_config:
             vot_run_command.extend(['--mixin_config', mixin_config])
     if args.weight_path is not None:
         vot_run_command.extend(['--weight_path', args.weight_path])
-
-    vot_run_command.extend(['--mixin_config', 'vot'])
 
     trax_timeout = 18000
 

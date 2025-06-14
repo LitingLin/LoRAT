@@ -1,3 +1,4 @@
+# A simple mmap based append-only storage engine
 import numpy as np
 import pickle
 import os

@@ -1,0 +1,4 @@
+!concat
+- !include "evaluation.yaml"
+- - path: "run.data.eval.source.parameters"
+    value: !include "../_dataset/test-full.yaml"

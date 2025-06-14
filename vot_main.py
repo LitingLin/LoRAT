@@ -15,6 +15,7 @@ def setup_arg_parser():
     arg_parser.add_argument('--device', type=str, default='cuda:0', help="pytorch device string.")
     arg_parser.add_argument('--run_id', type=str)
     arg_parser.add_argument('--weight_path', type=str)
+    arg_parser.add_argument('--enable_file_logging', action='store_true')
     return arg_parser
 
 

@@ -116,7 +116,7 @@ class reduce_dict_async:
             self.value_type = value_type
             self.average = average
 
-    def get(self):
+    def wait_and_get(self):
         if self.async_handle is not None:
             self.async_handle.wait()
 

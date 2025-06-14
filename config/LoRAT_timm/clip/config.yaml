@@ -1,0 +1,36 @@
+name: "CLIP/B-256"
+
+logging:
+  category: "LoRAT"
+  tags:
+    - "CLIP"
+    - "256"
+    - "base"
+    - "LoRA"
+
+type: "LoRAT-timm"
+
+common:
+  template_size: [ 128, 128 ]
+  search_region_size: [ 256, 256 ]
+  template_feat_size: [ 8, 8 ]
+  search_region_feat_size: &search_region_feat_size [ 16, 16 ]
+  response_map_size: *search_region_feat_size
+  interpolation_mode: "bilinear"
+  interpolation_align_corners: false
+  normalization: "openai_clip"
+
+model:
+  type: "vit"
+  backbone:
+    type: "timm"
+    parameters:
+      model_name: "vit_base_patch16_clip_quickgelu_224"
+  lora:
+    enabled: true
+    r: 64
+    alpha: 64
+    dropout: 0.
+    use_rslora: false
+
+run: !include "../run.yaml"

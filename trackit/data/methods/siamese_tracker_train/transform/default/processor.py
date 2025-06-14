@@ -10,7 +10,7 @@ from typing import Optional, Sequence, Mapping
 from trackit.data.utils.collation_helper import collate_element_as_torch_tensor, collate_element_as_np_array
 from trackit.data.protocol.train_input import TrainData
 from trackit.core.transforms.dataset_norm_stats import get_dataset_norm_stats_transform
-from trackit.data import HostDataPipeline
+from trackit.data import MainProcessDataPipeline
 from trackit.core.runtime.metric_logger import get_current_metric_logger
 
 from ..._types import SiameseTrainingPair, SOTFrameInfo
@@ -27,7 +27,8 @@ class SiamFCCroppingParameter:
     translation_jitter_factor: float = 0.
     output_min_object_size_in_pixel: np.ndarray = field(default_factory=lambda: np.array((0., 0.)))  # (width, height)
     output_min_object_size_in_ratio: float = 0.  # (width, height)
-    output_max_object_size_in_pixel: np.ndarray = field(default_factory=lambda: np.array((float("inf"), float("inf"))))  # (width, height)
+    output_max_object_size_in_pixel: np.ndarray = field(
+        default_factory=lambda: np.array((float("inf"), float("inf"))))  # (width, height)
     output_max_object_size_in_ratio: float = 1.  # (width, height)
     interpolation_mode: str = 'bilinear'
     interpolation_align_corners: bool = False
@@ -38,6 +39,7 @@ class SiamTrackerTrainingPairProcessor(SiameseTrackerTrain_DataTransform):
                  template_siamfc_cropping_parameter: SiamFCCroppingParameter,
                  search_region_siamfc_cropping_parameter: SiamFCCroppingParameter,
                  augmentation_pipeline: AugmentationPipeline,
+                 static_image_augmentation_pipeline: AugmentationPipeline,
                  norm_stats_dataset_name: str,
                  additional_processors: Optional[Sequence[ExtraTransform]] = None,
                  visualize: bool = False):
@@ -45,6 +47,7 @@ class SiamTrackerTrainingPairProcessor(SiameseTrackerTrain_DataTransform):
         self.search_region_siamfc_cropping = SiamFCCropping(search_region_siamfc_cropping_parameter)
 
         self.augmentation_pipeline = augmentation_pipeline
+        self.static_image_augmentation_pipeline = static_image_augmentation_pipeline
         self.additional_processors = additional_processors
 
         self.image_normalize_transform_ = get_dataset_norm_stats_transform(norm_stats_dataset_name, inplace=True)
@@ -65,14 +68,18 @@ class SiamTrackerTrainingPairProcessor(SiameseTrackerTrain_DataTransform):
         image_decoding_cache = {}
         _decode_image_with_cache('z', training_pair.template, image_decoding_cache, context)
         _decode_image_with_cache('x', training_pair.search, image_decoding_cache, context)
+
+        is_same_image = len(image_decoding_cache) == 1
         del image_decoding_cache
+
         self.template_siamfc_cropping.do('z', context)
         self.search_region_siamfc_cropping.do('x', context)
 
-        self._do_augmentation(context, rng_engine)
+        self._do_augmentation(context, rng_engine, is_same_image)
 
         _bbox_clip_to_image_boundary_(context['z_cropped_bbox'], context['z_cropped_image'])
         _bbox_clip_to_image_boundary_(context['x_cropped_bbox'], context['x_cropped_image'])
+
         self.image_normalize_transform_(context['z_cropped_image'])
         self.image_normalize_transform_(context['x_cropped_image'])
 
@@ -97,12 +104,16 @@ class SiamTrackerTrainingPairProcessor(SiameseTrackerTrain_DataTransform):
 
         return data
 
-    def _do_augmentation(self, context: dict, rng_engine: np.random.Generator):
+    def _do_augmentation(self, context: dict, rng_engine: np.random.Generator, is_same_image: bool):
         from .augmentation import AnnotatedImage
         augmentation_context = {'template': [AnnotatedImage(context['z_cropped_image'], context['z_cropped_bbox'])],
-                                'search_region': [AnnotatedImage(context['x_cropped_image'], context['x_cropped_bbox'])]}
+                                'search_region': [
+                                    AnnotatedImage(context['x_cropped_image'], context['x_cropped_bbox'])]}
 
-        self.augmentation_pipeline(augmentation_context, rng_engine)
+        if is_same_image:
+            self.static_image_augmentation_pipeline(augmentation_context, rng_engine)
+        else:
+            self.augmentation_pipeline(augmentation_context, rng_engine)
 
         context['z_cropped_image'] = augmentation_context['template'][0].image
         context['z_cropped_bbox'] = augmentation_context['template'][0].bbox
@@ -123,7 +134,8 @@ class SiamFCCropping:
 
     def prepare(self, name: str, rng_engine: np.random.Generator, context: dict):
         cropping_parameter, is_success = \
-            prepare_siamfc_cropping_with_augmentation(context[f'{name}_bbox'], self.siamfc_cropping_parameter.area_factor,
+            prepare_siamfc_cropping_with_augmentation(context[f'{name}_bbox'],
+                                                      self.siamfc_cropping_parameter.area_factor,
                                                       self.siamfc_cropping_parameter.output_size,
                                                       self.siamfc_cropping_parameter.scale_jitter_factor,
                                                       self.siamfc_cropping_parameter.translation_jitter_factor,
@@ -132,8 +144,9 @@ class SiamFCCropping:
                                                       self.siamfc_cropping_parameter.output_max_object_size_in_pixel,
                                                       self.siamfc_cropping_parameter.output_min_object_size_in_ratio,
                                                       self.siamfc_cropping_parameter.output_max_object_size_in_ratio)
-        if is_success:
-            context[f'{name}_cropping_parameter'] = cropping_parameter
+
+        context[f'{name}_cropping_parameter'] = cropping_parameter
+        context[f'{name}_cropping_is_success'] = is_success
         return is_success
 
     def do(self, name: str, context: dict, normalized: bool = True):
@@ -147,7 +160,9 @@ class SiamFCCropping:
             image_cropped.div_(255.)
         context[f'{name}_cropping_parameter'] = cropping_parameter
         context[f'{name}_cropped_image'] = image_cropped
-        context[f'{name}_cropped_bbox'] = apply_siamfc_cropping_to_boxes(context[f'{name}_bbox'], cropping_parameter)
+        if context[f'{name}_cropping_is_success']:
+            context[f'{name}_cropped_bbox'] = apply_siamfc_cropping_to_boxes(context[f'{name}_bbox'],
+                                                                             cropping_parameter)
 
 
 def _decode_image_with_cache(name: str, frame: SOTFrameInfo, cache: dict, context: dict):
@@ -165,13 +180,15 @@ def _decode_image_with_cache(name: str, frame: SOTFrameInfo, cache: dict, contex
 
 
 class SiamTrackerTrainingPairProcessorBatchCollator:
-    def __init__(self, additional_collators: Optional[Sequence[ExtraTransform_DataCollector]] = None):
+    def __init__(self, dtype: torch.dtype,
+                 additional_collators: Optional[Sequence[ExtraTransform_DataCollector]] = None):
+        self.dtype = dtype
         self.additional_collators = additional_collators
 
     def __call__(self, batch: Sequence[Mapping], collated: TrainData):
         collated.input.update({
-            'z': collate_element_as_torch_tensor(batch, 'z_cropped_image'),
-            'x': collate_element_as_torch_tensor(batch, 'x_cropped_image')
+            'z': collate_element_as_torch_tensor(batch, 'z_cropped_image').to(self.dtype),
+            'x': collate_element_as_torch_tensor(batch, 'x_cropped_image').to(self.dtype),
         })
         collated.miscellanies.update({'is_positive': collate_element_as_np_array(batch, 'is_positive')})
 
@@ -180,7 +197,7 @@ class SiamTrackerTrainingPairProcessorBatchCollator:
                 additional_collator(batch, collated)
 
 
-class SiamTrackerTrainingPairProcessorHostLoggingHook(HostDataPipeline):
+class SiamTrackerTrainingPairProcessorMainProcessLoggingHook(MainProcessDataPipeline):
     def pre_process(self, input_data: TrainData) -> TrainData:
         is_positive = input_data.miscellanies['is_positive']
         positive_sample_ratio = (np.sum(is_positive) / len(is_positive)).item()

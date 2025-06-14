@@ -1,11 +1,11 @@
 import numpy as np
 from typing import Optional
-from trackit.miscellanies.operating_system.path import join_paths
+from trackit.miscellanies.system.operating_system.path import join_paths
 from trackit.datasets.common.specialization.memory_mapped.dataset import LazyAttributesLoader, DummyAttributesLoader, MemoryMappedDataset
 from trackit.datasets.common.specialization.memory_mapped.engine import ListMemoryMapped
 
 __all__ = ['SingleObjectTrackingDataset_MemoryMapped']
-__version__ = 4
+__version__ = 6
 
 
 class SingleObjectTrackingDatasetFrame_MemoryMapped:
@@ -56,10 +56,10 @@ class SingleObjectTrackingDatasetFrame_MemoryMapped:
         return self.sequence_additional_attributes_loader.get_all_attribute_name_tree_query(('frames', self.frame_index, 'object'))
 
     def get_object_attribute(self, name: str):
-        return self.sequence_additional_attributes_loader.get_attribute_tree_query(('frames', self.frame_index, name, 'object'))
+        return self.sequence_additional_attributes_loader.get_attribute_tree_query(('frames', self.frame_index, 'object', name))
 
     def has_object_attribute(self, name: str):
-        return self.sequence_additional_attributes_loader.has_attribute_tree_query(('frames', self.frame_index, name, 'object'))
+        return self.sequence_additional_attributes_loader.has_attribute_tree_query(('frames', self.frame_index, 'object', name))
 
 
 class SingleObjectTrackingDatasetSequence_MemoryMapped:

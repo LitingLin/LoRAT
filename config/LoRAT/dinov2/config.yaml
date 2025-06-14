@@ -16,7 +16,6 @@ common:
   template_feat_size: [ 8, 8 ]
   search_region_feat_size: &search_region_feat_size [ 16, 16 ]
   response_map_size: *search_region_feat_size
-  template_feat_data_layout: "NLC"
   interpolation_mode: "bilinear"
   interpolation_align_corners: false
   normalization: "imagenet"

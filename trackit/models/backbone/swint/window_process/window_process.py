@@ -4,7 +4,6 @@
 # Licensed under The MIT License [see LICENSE for details]
 # --------------------------------------------------------
 
-import torch.autograd
 import torch.cuda
 import os
 from trackit.miscellanies.torch.native_extension_jit import load_cuda_extension

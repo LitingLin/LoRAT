@@ -17,10 +17,13 @@ def setup_arg_parser():
 
     parser.add_argument('--pin_memory', action='store_true', help='move tensors to pinned memory before transferring to GPU')
 
-    parser.add_argument('--disable_wandb', action='store_true', help='disable wandb')
+    parser.add_argument('--enable_wandb', action='store_true', help='enable wandb')
     parser.add_argument('--wandb_run_offline', action='store_true', help='run wandb offline')
+
+    parser.add_argument('--disable_file_logging', action='store_true', help='disable file logging')
+    parser.add_argument('--enable_rich_logging', action='store_true', help='enable rich logging')
     parser.add_argument('--enable_stack_trace_on_error', action='store_true', help='enable stack trace on error')
-    parser.add_argument('--allow_non_master_node_print', action='store_true', help='enable logging on non-master nodes')
+    parser.add_argument('--allow_non_master_node_printing', action='store_true', help='enable logging on non-master nodes')
 
     parser.add_argument('--do_sweep', action='store_true')
     parser.add_argument('--sweep_config', type=str)
@@ -29,6 +32,7 @@ def setup_arg_parser():
 
     parser.add_argument('--run_id', type=str)
 
+    # distributed training parameters
     parser.add_argument('--master_address', type=str, default='127.0.0.1')
     parser.add_argument('--distributed_node_rank', type=int, default=0)
     parser.add_argument('--distributed_nnodes', type=int, default=1)
@@ -39,6 +43,8 @@ def setup_arg_parser():
     parser.add_argument('--kill_other_python_processes', action='store_true')
     parser.add_argument('--multiprocessing_start_method_spawn', action='store_true')
     parser.add_argument('--weight_path', type=str, action='append')
+
+    parser.add_argument('--enable_profiling', action='store_true')
 
     return parser
 

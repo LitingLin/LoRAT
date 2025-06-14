@@ -1,34 +1,55 @@
-from typing import Union
+from typing import Sequence, Mapping
 from . import CheckpointDumper
-from ...epoch_activation_criteria.builder import build_epoch_activation_criteria
+from .scheduling.builder import build_checkpoint_scheduler
 
 
-def _build_checkpoint_sub_dumper(checkpoint_dumper_config: dict, output_path: str, num_epochs: int):
-    if checkpoint_dumper_config['type'] == 'regular':
-        epoch_activation_criteria = build_epoch_activation_criteria(checkpoint_dumper_config.get('epoch_trigger', None), num_epochs)
-        resumable = checkpoint_dumper_config.get('resumable', False)
+def build_checkpoint_dumper(checkpoint_dumper_config: Sequence[Mapping], output_path: str,
+                            num_epochs: int) -> CheckpointDumper:
+    epoch_based_dumpers = []
+    step_based_dumpers = []
+    metric_based_dumpers = []
+    for sub_dumper_config in checkpoint_dumper_config:
+        if sub_dumper_config['type'] == 'regular':
+            from . import RegularCheckpointDumper
+            epoch_selector = build_checkpoint_scheduler(sub_dumper_config.get('epoch_trigger', None))
+            resumable = sub_dumper_config.get('resumable', False)
+            drop_last = sub_dumper_config.get('drop_last', True)
+            max_to_keep = sub_dumper_config.get('max_to_keep', -1)
+            exclude_frozen_parameters = sub_dumper_config.get('exclude_frozen_parameters', True)
 
-        from . import EpochEventCheckpointDumper
-        return EpochEventCheckpointDumper(output_path, epoch_activation_criteria, num_epochs, resumable, checkpoint_dumper_config.get('max_to_keep', -1))
-    elif checkpoint_dumper_config['type'] == 'best':
-        metric_name = checkpoint_dumper_config['metric']
-        top_k = checkpoint_dumper_config.get('top_k', 1)
-        resumable = checkpoint_dumper_config.get('resumable', False)
-        epoch_activation_criteria = build_epoch_activation_criteria(checkpoint_dumper_config.get('epoch_trigger', None), num_epochs)
+            epoch_based_dumpers.append(RegularCheckpointDumper(output_path, epoch_selector, drop_last,
+                                                               num_epochs, resumable, max_to_keep,
+                                                               is_epoch_based=True,
+                                                               exclude_frozen_parameters=exclude_frozen_parameters))
+        elif sub_dumper_config['type'] == 'regular_step':
+            from . import RegularCheckpointDumper
+            epoch_selector = build_checkpoint_scheduler(sub_dumper_config.get('step_trigger', None))
+            drop_last = sub_dumper_config.get('drop_last', True)
+            max_to_keep = sub_dumper_config.get('max_to_keep', -1)
+            exclude_frozen_parameters = sub_dumper_config.get('exclude_frozen_parameters', True)
+            # "resumable" is not supported for step-based dumper
 
-        from . import BestCheckpointDumper
-        return BestCheckpointDumper(output_path, metric_name, top_k, epoch_activation_criteria, resumable)
-    elif checkpoint_dumper_config['type'] == 'latest':
-        resumable = checkpoint_dumper_config.get('resumable', False)
+            step_based_dumpers.append(RegularCheckpointDumper(output_path, epoch_selector, drop_last,
+                                                              None, False, max_to_keep,
+                                                              is_epoch_based=False,
+                                                              exclude_frozen_parameters=exclude_frozen_parameters))
+        elif sub_dumper_config['type'] == 'best':
+            metric_name = sub_dumper_config['metric']
+            top_k = sub_dumper_config.get('top_k', 1)
+            resumable = sub_dumper_config.get('resumable', False)
+            epoch_selector = build_checkpoint_scheduler(sub_dumper_config.get('epoch_trigger', None))
+            drop_last = sub_dumper_config.get('drop_last', True)
+            exclude_frozen_parameters = sub_dumper_config.get('exclude_frozen_parameters', True)
 
-        from . import LatestCheckpointDumper
-        return LatestCheckpointDumper(output_path, resumable)
-    else:
-        raise NotImplementedError(f"Unknown checkpoint dumper type: {checkpoint_dumper_config['type']}")
+            from . import BestCheckpointDumper
+            metric_based_dumpers.append(BestCheckpointDumper(output_path, metric_name, top_k, epoch_selector,
+                                                             drop_last, resumable, exclude_frozen_parameters))
+        elif sub_dumper_config['type'] == 'latest':
+            resumable = sub_dumper_config.get('resumable', False)
+            exclude_frozen_parameters = sub_dumper_config.get('exclude_frozen_parameters', True)
 
-
-def build_checkpoint_dumper(checkpoint_dumper_config: Union[dict, list, tuple], output_path: str, num_epochs: int) -> CheckpointDumper:
-    if isinstance(checkpoint_dumper_config, (list, tuple)):
-        return CheckpointDumper(_build_checkpoint_sub_dumper(sub_config, output_path, num_epochs) for sub_config in checkpoint_dumper_config)
-    else:
-        return CheckpointDumper((_build_checkpoint_sub_dumper(checkpoint_dumper_config, output_path, num_epochs),))
+            from . import LatestCheckpointDumper
+            epoch_based_dumpers.append(LatestCheckpointDumper(output_path, resumable, exclude_frozen_parameters))
+        else:
+            raise NotImplementedError(f"Unknown checkpoint dumper type: {sub_dumper_config['type']}")
+    return CheckpointDumper(epoch_based_dumpers, step_based_dumpers, metric_based_dumpers)

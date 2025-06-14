@@ -81,8 +81,8 @@ class CustomEvaAttention(nn.Module):
             v = self.v_proj(x).reshape(B, N, self.num_heads, -1).transpose(1, 2)
 
         if rope is not None:
-            q = apply_rot_embed_cat(q, rope)
-            k = apply_rot_embed_cat(k, rope)
+            q = apply_rot_embed_cat(q, rope).to(q.dtype)
+            k = apply_rot_embed_cat(k, rope).to(k.dtype)
 
         if self.fused_attn:
             x = F.scaled_dot_product_attention(

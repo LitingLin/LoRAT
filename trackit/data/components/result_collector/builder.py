@@ -29,7 +29,10 @@ def build_evaluation_result_collector(result_collector_config: dict, build_conte
                                                                     optional_predefined_evaluation_tasks,
                                                                     run_async,
                                                                     log_summary)
-    build_context.services.event.register_on_epoch_begin_event_listener(lambda epoch, is_train: result_collector.on_epoch_begin())
-    build_context.services.event.register_on_epoch_end_event_listener(lambda epoch, is_train: result_collector.on_epoch_end())
-    build_context.services.batch_collective_communication.all_gather.register(result_collector.distributed_prepare_gathering, result_collector.distributed_on_gathered)
+    build_context.services.event.register_on_epoch_begin_event_listener(
+        lambda epoch, is_train: result_collector.on_epoch_begin())
+    build_context.services.event.register_on_epoch_end_event_listener(
+        lambda epoch, is_train: result_collector.on_epoch_end())
+    build_context.services.batch_collective_communication.gather.register(
+        result_collector.distributed_prepare_gathering, result_collector.distributed_on_gathered, dst_rank=0)
     return result_collector

@@ -117,7 +117,7 @@ def scale_and_translate(img: torch.Tensor, output_size: np.ndarray,
 
 
 # generally aligned with tf.raw_ops.ScaleAndTranslate. note that our input is in (w, h) format
-# about 1.7x slower than the pixel aligned implementation (above) on CPU
+# cost about 1.7x cpu times compared with the pixel aligned implementation (above)
 def scale_and_translate_subpixel(image: torch.Tensor, size: Tuple[int, int],
                                  scale: Union[torch.Tensor, np.ndarray], translation: Union[torch.Tensor, np.ndarray],
                                  interpolation_mode: str = 'bilinear', align_corners: bool = False,

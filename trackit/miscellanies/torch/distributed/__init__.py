@@ -1,9 +1,8 @@
 import os
 import sys
-
-from contextlib import contextmanager
-from datetime import timedelta
 from typing import Optional
+from datetime import timedelta
+from contextlib import contextmanager
 
 import torch
 import torch.distributed as dist
@@ -64,11 +63,11 @@ def get_rank() -> int:
     return _rank
 
 
-def is_main_process() -> bool:
+def is_rank_0_process() -> bool:
     return get_rank() == 0
 
 
-def is_local_main_process() -> bool:
+def is_local_rank_0_process() -> bool:
     return get_local_rank() == 0
 
 
@@ -77,7 +76,7 @@ def _log_info(message: str, dist_backend: str, rank: int, world_size: int, local
     sys.stdout.flush()
 
 
-def init_torch_distributed(device: str, silent_non_local_master: bool = True, use_aux_process_group: bool = True):
+def init_torch_distributed(device: str, use_aux_process_group: bool = True):
     global _dist_enabled
     global _rank
     global _world_size
@@ -104,7 +103,14 @@ def init_torch_distributed(device: str, silent_non_local_master: bool = True, us
         dist_backend = 'gloo'
 
     _log_info('torch.distributed initializing', dist_backend, rank, world_size, local_rank, local_world_size)
-    dist.init_process_group(backend=dist_backend, init_method='env://', world_size=world_size, rank=rank)
+    kwargs = {}
+    if dist_backend != 'nccl':
+        kwargs['timeout'] = timedelta(days=1)
+    else:
+        pytorch_version = tuple(int(v) for v in torch.__version__.split(".")[:2])
+        if pytorch_version >= (2, 3):
+            kwargs['device_id'] = torch.device('cuda:{}'.format(local_rank))
+    dist.init_process_group(backend=dist_backend, init_method='env://', world_size=world_size, rank=rank, **kwargs)
     _log_info('torch.distributed initialized', dist_backend, rank, world_size, local_rank, local_world_size)
 
     # dist.barrier()
@@ -117,11 +123,6 @@ def init_torch_distributed(device: str, silent_non_local_master: bool = True, us
         _group_aux = dist.new_group(backend=aux_dist_backend, timeout=timedelta(days=1))
         assert _group_aux is not None, 'Failed to create auxiliary process group'
         _log_info('torch.distributed initialized', aux_dist_backend, rank, world_size, local_rank, local_world_size)
-
-    if silent_non_local_master:
-        if local_rank != 0:
-            f = open(os.devnull, 'w')
-            sys.stdout = f
 
     _rank = rank
     _world_size = world_size
@@ -136,13 +137,13 @@ def cleanup_torch_distributed():
     if _dist_enabled:
         global _group_aux
         dist.barrier()
+        import gc
+        gc.collect()
         if _group_aux is not None:
             dist.destroy_process_group(_group_aux)
             _group_aux = None
         dist.destroy_process_group()
         print('| torch.distributed disabled', flush=True)
-        if _local_rank != 0:
-            sys.stdout = sys.__stdout__
         _dist_enabled = False
 
 

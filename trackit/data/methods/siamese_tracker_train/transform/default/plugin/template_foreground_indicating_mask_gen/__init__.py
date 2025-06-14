@@ -1,6 +1,5 @@
 from typing import Tuple, Sequence, Mapping
 import numpy as np
-import torch
 
 from trackit.data.protocol.train_input import TrainData
 from trackit.data.utils.collation_helper import collate_element_as_torch_tensor

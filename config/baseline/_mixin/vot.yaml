@@ -2,7 +2,7 @@
 - !include "evaluation.yaml"
 - - path: "run.data.eval.type"
     value: "siamese_tracker_eval_vot"
-  - path: "run.model_assessment.enabled"
+  - path: "run.profiling.enabled"
     value: false
   - path: "run.data.eval"
     action: "merge"

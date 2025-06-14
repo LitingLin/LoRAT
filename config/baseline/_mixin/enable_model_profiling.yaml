@@ -1,0 +1,2 @@
+- path: "run.profiling.enabled"
+  value: true

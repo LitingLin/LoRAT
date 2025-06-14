@@ -10,7 +10,7 @@ class UAV123_Seed(BaseSeed):
             dataset_name = 'UAV20L'
         else:
             dataset_name = 'UAV123'
-        super().__init__(dataset_name, root_path, None, (), 4)
+        super().__init__(dataset_name, root_path)
 
     def construct(self, constructor):
         from .Impl.UAV123 import construct_UAV123

@@ -30,8 +30,7 @@ class Attention(nn.Module):
         if self.qkv_packed:
             x = flash_attn_qkvpacked_func(qkv, dropout_p=self.attn_drop.p if self.attn_drop.training else 0)
         else:
-            qkv = qkv.permute(2, 0, 3, 1, 4)
-            q, k, v = qkv.unbind(0)
+            q, k, v = qkv.unbind(2)
             x = flash_attn_func(q, k, v, dropout_p=self.attn_drop.p if self.attn_drop.training else 0)
         
         x = x.reshape(B, N, C)

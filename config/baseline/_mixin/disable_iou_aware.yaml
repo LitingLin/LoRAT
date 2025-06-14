@@ -1,0 +1,2 @@
+- path: "run.runner.train.criteria.classification.iou_aware_classification_score"
+  value: false

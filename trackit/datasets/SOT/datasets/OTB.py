@@ -16,7 +16,7 @@ class OTB_Seed(BaseSeed):
 
         self.otb_version = version
 
-        super().__init__(version.name, root_path, None, (), 7)
+        super().__init__(version.name, root_path)
 
     def construct(self, constructor):
         from .Impl.OTB import construct_OTB

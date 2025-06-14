@@ -1,9 +1,9 @@
 import os
-from trackit.miscellanies.operating_system.path import join_paths
+from trackit.miscellanies.system.operating_system.path import join_paths
 from trackit.datasets.base.common.dataset import _BaseDataset, _BaseDatasetObject
 
 __all__ = ['VideoDataset']
-__version__ = 4
+__version__ = 5
 
 
 class VideoDatasetFrame:

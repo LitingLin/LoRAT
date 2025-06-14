@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import numpy as np
+from PIL import Image
 from typing import Callable, Optional
 from trackit.data.protocol.eval_input import SequenceInfo
 
@@ -9,6 +10,7 @@ class SiameseTrackerEvalDataWorker_FrameContext:
     frame_index: int
     get_image: Callable[[], np.ndarray]
     gt_bbox: Optional[np.ndarray]
+    gt_mask: Optional[Image.Image]
 
 
 @dataclass(frozen=True)

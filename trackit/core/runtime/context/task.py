@@ -1,9 +1,10 @@
-from dataclasses import dataclass, field
-from typing import Optional, Mapping
 import os
-from .epoch import get_current_epoch_context
-from trackit.core.runtime.utils.epoch_activation_criteria import EpochActivationCriterion
+from dataclasses import dataclass, field
+from typing import Optional, Mapping, Any
+
+from trackit.core.runtime.utils.execution_trigger import ExecutionCriterion
 from trackit.core.runtime.services.batch_collective_communication import BatchCollectiveCommunication
+from .epoch import get_current_epoch_context
 
 
 @dataclass()
@@ -18,8 +19,8 @@ class TaskContext:
     _output_path: Optional[str]
     data_name: str
     runner_name: str
-    epoch_activation_criteria: EpochActivationCriterion
-    variables: Mapping
+    epoch_selector: ExecutionCriterion
+    variables: Mapping[str, Any]
     collective_communication: BatchCollectiveCommunication
 
     __mutable_vars: _MutableVariables = field(default_factory=_MutableVariables)

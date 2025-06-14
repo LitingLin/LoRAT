@@ -1,7 +1,7 @@
 - path: "name"
   value: "DINOv2/g-224"
 - path: "logging.tags"
-  action: "remove"
+  action: "remove_by_value"
   value: "base"
 - path: "logging.tags"
   action: "append"

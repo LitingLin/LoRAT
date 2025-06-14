@@ -2,10 +2,10 @@ import csv
 import numpy as np
 import json
 import pickle
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict
 from trackit.core.operator.numpy.bbox.format import bbox_xyxy_to_xywh
 from ..utils.writer import FolderWriter
-from .ope_metrics import DatasetOPEMetricsList, OPEMetrics
+from .ope_metrics import DatasetOPEResults, OPEMetrics
 
 
 def dump_sequence_tracking_results_with_groundtruth(folder_writer: FolderWriter,
@@ -66,7 +66,7 @@ def generate_sequence_one_pass_evaluation_report(
 def generate_dataset_one_pass_evaluation_report(
         folder_writer: FolderWriter, tracker_name: str,
         repeat_index: Optional[int], dataset_name: str,
-        all_sequences_ope_metrics: DatasetOPEMetricsList,
+        all_sequences_ope_metrics: DatasetOPEResults,
         dataset_summary_ope_metrics: Optional[OPEMetrics] = None):
     if dataset_summary_ope_metrics is None:
         dataset_summary_ope_metrics = all_sequences_ope_metrics.get_mean()
@@ -83,14 +83,6 @@ def generate_dataset_one_pass_evaluation_report(
                                  ope_metrics.success_rate_at_overlap_0_5,
                                  ope_metrics.success_rate_at_overlap_0_75,
                                  ope_metrics.get_fps()))
-
-    # with folder_writer.open_binary_file_handle((*path, 'success_plot.pdf')) as f:
-    #     draw_success_plot(np.expand_dims(dataset_summary_ope_metrics.success_curve, axis=0), (tracker_name,), f)
-    # with folder_writer.open_binary_file_handle((*path, 'precision_plot.pdf')) as f:
-    #     draw_precision_plot(np.expand_dims(dataset_summary_ope_metrics.precision_curve, axis=0), (tracker_name,), f)
-    # with folder_writer.open_binary_file_handle((*path, 'norm_precision_plot.pdf')) as f:
-    #     draw_normalized_precision_plot(np.expand_dims(dataset_summary_ope_metrics.normalized_precision_curve, axis=0),
-    #                                    (tracker_name,), f)
 
     dataset_report = {'success_score': dataset_summary_ope_metrics.success_score,
                       'precision_score': dataset_summary_ope_metrics.precision_score,

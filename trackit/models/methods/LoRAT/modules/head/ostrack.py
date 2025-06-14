@@ -52,14 +52,14 @@ class OSTrackConvHead(nn.Module):
                 x (torch.Tensor): (B, H * W, C) input feature map
             Returns:
                 Dict: {
-                    'score_map' (torch.Tensor): (B, 1, H, W)
+                    'score_map' (torch.Tensor): (B, H, W)
                     'bbox' (torch.Tensor): (B, H, W, 4)
                 }
         '''
 
         B = x.shape[0]
         W, H = self.map_size
-        x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2)
+        x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
 
         # ctr branch
         x_ctr1 = self.conv1_ctr(x)

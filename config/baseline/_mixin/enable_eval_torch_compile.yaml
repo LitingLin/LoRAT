@@ -1,0 +1,6 @@
+- path: "run.runner.test.inference_engine.torch_compile"
+  value:
+    enabled: true
+    parameters:
+      mode: "default"
+      dynamic: true

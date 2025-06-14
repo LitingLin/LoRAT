@@ -1,12 +1,10 @@
 - path: "logging.tags"
-  action: "remove"
+  action: "remove_by_value"
   value: "224"
 - path: "logging.tags"
   action: "append"
   value: "378"
-- path:
-  - "common.template_feat_size"
-  - "model.template_feat_size"
+- path: "common.template_feat_size"
   value: [ 14, 14 ]
 - path: "common.template_size"
   value: [ 196, 196 ]

@@ -1,13 +1,13 @@
 import torch
 from dataclasses import dataclass
 from typing import Optional
-from trackit.miscellanies.operating_system import get_os_running_on, OperatingSystem
+from trackit.miscellanies.system.operating_system import get_os_running_on, OperatingSystem
 
 
 @dataclass(frozen=True)
 class TorchCompileOption:
     enabled: bool = False
-    options: Optional[dict] = None
+    parameters: Optional[dict] = None
 
     @staticmethod
     def from_config(config: dict):

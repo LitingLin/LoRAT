@@ -1,0 +1,17 @@
+- path: "run.data.test"
+  action: "merge"
+  value:
+      dtype: float16
+- path: "run.data.eval"
+  action: "merge"
+  value:
+      dtype: float16
+- path: "run.runner.test.inference_engine.auto_mixed_precision.enabled"
+  value: false
+- path: "run.profiling.auto_mixed_precision.enabled"
+  value: false
+- path: "run.profiling"
+  action: "merge"
+  value:
+    eval:
+      dtype: float16

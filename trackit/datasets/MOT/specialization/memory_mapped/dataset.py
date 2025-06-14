@@ -1,10 +1,10 @@
 import numpy as np
-from trackit.miscellanies.operating_system.path import join_paths
+from trackit.miscellanies.system.operating_system.path import join_paths
 from trackit.datasets.common.specialization.memory_mapped.dataset import LazyAttributesLoader, DummyAttributesLoader, MemoryMappedDataset
 from trackit.datasets.common.specialization.memory_mapped.engine import ListMemoryMapped
 
 __all__ = ['MultipleObjectTrackingDataset_MemoryMapped']
-__version__ = 4
+__version__ = 5
 
 
 class MultipleObjectTrackingDatasetFrameObject_MemoryMapped:

@@ -2,11 +2,10 @@ type: "default"
 
 num_epochs: 170
 
-efficiency_assessment:
+profiling:
   enabled: true
-  latency:
-    auto_mixed_precision:
-      enabled: true
+  auto_mixed_precision:
+    enabled: true
 
 checkpoint:
   - type: "regular"
@@ -92,7 +91,7 @@ data:
       weight:
         - match:
             type: "dataset"
-            name_regex: "GOT-10k"
+            name: "GOT-10k"
           value: 1.0
         - match:
             type: "dataset"
@@ -104,7 +103,7 @@ data:
           value: 1.0
         - match:
             type: "dataset"
-            name_regex: "COCO"
+            name: "COCO"
           value: 1.0
 
     siamese_training_pair_sampling: &siamese_training_pair_sampling
@@ -259,18 +258,17 @@ runner:
         fused: false
         per_parameter:
           - type: "vit_lr_layer_decay"
-            patch_embed:
+            first_layer:
               - name_regex: "^patch_embed"
               - name_regex: "^norm_pre"
             blocks: "blocks"
             lr_decay_rate: 0.7
-            num_layers: 12
             zero_1d_params_weight_decay: true
           - type: "zero_1d_param_weight_decay"
           - name_regex: "embed"
             weight_decay: 0.
       grad_accumulation_steps: 1
-      max_grad_norm: 1.0
+      max_grad_norm: 0.1
       zero_grad_set_to_none: true
       lr_scheduler:
         type: "timm"

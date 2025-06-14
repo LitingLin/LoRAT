@@ -1,6 +1,6 @@
 import time
 from dataclasses import dataclass
-from typing import Protocol, Any, Sequence
+from typing import Protocol, Any, Sequence, Optional
 from enum import Enum, auto
 
 from trackit.miscellanies.torch.distributed.collective_communication import CollectiveCommunication
@@ -18,11 +18,20 @@ class CollectiveCommunicationService(Protocol):
     def all_gather(self, object_: Any, index: int) -> Sequence[Any]:
         ...
 
+    def gather(self, object_: Any, dst_rank: int, index: int) -> Optional[Sequence[Any]]:
+        ...
 
 class DummyDistributedCommunication:
     @staticmethod
     def all_gather(object_, index: int = 0):
         return object_,
+
+    @staticmethod
+    def gather(object_: Any, dst_rank: int, index: int = 0) -> Optional[Sequence[Any]]:
+        if get_rank() == dst_rank:
+            return object_,
+        else:
+            return None
 
 
 def _run_batching_all_gather(collective_communication: CollectiveCommunicationService,
@@ -48,14 +57,25 @@ def _run_batching_gather(collective_communication: CollectiveCommunicationServic
                          batched_service_registry_operator_gather_list: Sequence[BatchCollectiveCommunicationServiceOperatorGatherRegistry],
                          iteration: int):
     batch = []
+    dst_rank = None
     for registry in batched_service_registry_operator_gather_list:
         for context in registry.list():
             batch.append(context.data_prepare_fn())
+            if dst_rank is None:
+                dst_rank = context.dst_rank
+            elif dst_rank != context.dst_rank:
+                dst_rank = -1
 
     if len(batch) == 0:
         return
-    gathered = collective_communication.all_gather(batch, index=iteration)
-    assert all(len(rank_batch) == len(batch) for rank_batch in gathered)
+
+    if dst_rank == -1:
+        gathered = collective_communication.all_gather(batch, index=iteration)
+        assert all(len(rank_batch) == len(batch) for rank_batch in gathered)
+    else:
+        gathered = collective_communication.gather(batch, dst_rank, index=iteration)
+        if get_rank() == dst_rank:
+            assert all(len(rank_batch) == len(batch) for rank_batch in gathered)
     index = 0
     for registry in batched_service_registry_operator_gather_list:
         for context in registry.list():
@@ -105,13 +125,13 @@ class BatchCollectiveCommunication:
         raise NotImplementedError()
 
 
-class TimedBatchCollectiveCommunication_FixedStepInterval(BatchCollectiveCommunication):
+class BatchCollectiveCommunication_FixedStepInterval(BatchCollectiveCommunication):
     def __init__(self, step_interval: int = 1):
         self._normal_step_interval = step_interval
         self._low_step_interval = 1
 
     def begin(self, batch_collective_communication_service_registry_list: Sequence[BatchCollectiveCommunicationServiceRegistry]):
-        super(TimedBatchCollectiveCommunication_FixedStepInterval, self).begin(batch_collective_communication_service_registry_list)
+        super(BatchCollectiveCommunication_FixedStepInterval, self).begin(batch_collective_communication_service_registry_list)
         self._step_interval = self._normal_step_interval
         self._step_interval_changed = False
         if is_dist_initialized() and _has_object_in_registries(batch_collective_communication_service_registry_list):
@@ -142,7 +162,7 @@ class TimedBatchCollectiveCommunication_FixedStepInterval(BatchCollectiveCommuni
         del self._collective_communication
         del self._step_interval
         del self._step_interval_changed
-        super(TimedBatchCollectiveCommunication_FixedStepInterval, self).end()
+        super(BatchCollectiveCommunication_FixedStepInterval, self).end()
 
 
 class BatchCollectiveCommunication_FixedTimeInterval(BatchCollectiveCommunication):

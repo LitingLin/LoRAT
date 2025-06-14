@@ -58,16 +58,16 @@ class SOTFrame(TrackingDataset_FrameInTrack, TrackingDataset_Frame):
         return self._frame.get_bounding_box_validity_flag().item() if self._frame.has_bounding_box_validity_flag() else True
 
     def get_object_attribute(self, name: str) -> Any:
-        return self.get_object_attribute(name)
+        return self._frame.get_object_attribute(name)
 
     def get_all_object_attribute_name(self) -> Tuple[str, ...]:
-        return self.get_all_object_attribute_name()
+        return self._frame.get_all_object_attribute_names()
 
     def get_frame_attribute(self, name: str) -> Any:
-        return self.get_frame_attribute(name)
+        return self._frame.get_frame_attribute(name)
 
     def get_all_frame_attribute_name(self) -> Tuple[str, ...]:
-        return self.get_all_frame_attribute_name()
+        return self._frame.get_all_frame_attribute_names()
 
 
 class SOTTrack(TrackingDataset_Track):

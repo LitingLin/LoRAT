@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, Sequence, Dict, Any, Iterable, Protocol
+from typing import Callable, Sequence, Any, Protocol
 from dataclasses import dataclass, field
 
 
@@ -54,7 +54,7 @@ class EpochBasedTrainerEventListenerRegistry:
     def register_on_start_event_listener(self, listener: OnStartStopEventCallback, priority: int = 50) -> int:
         return self._start_event.register(listener, priority)
 
-    def list_on_start_event_listener(self) -> Iterable[OnStartStopEventCallback]:
+    def list_on_start_event_listener(self) -> Sequence[OnStartStopEventCallback]:
         return self._start_event.list()
 
     def unregister_on_start_event_listener(self, handle: int) -> None:
@@ -63,7 +63,7 @@ class EpochBasedTrainerEventListenerRegistry:
     def register_on_stop_event_listener(self, listener: OnStartStopEventCallback, priority: int = 50) -> int:
         return self._stop_event.register(listener, priority)
 
-    def list_on_stop_event_listener(self) -> Iterable[OnStartStopEventCallback]:
+    def list_on_stop_event_listener(self) -> Sequence[OnStartStopEventCallback]:
         return self._stop_event.list()
 
     def unregister_on_stop_event_listener(self, handle: int) -> None:
@@ -72,7 +72,7 @@ class EpochBasedTrainerEventListenerRegistry:
     def register_on_epoch_begin_event_listener(self, listener: OnEpochBeginEndEventCallback, priority: int = 50) -> int:
         return self._epoch_begin_event.register(listener, priority)
 
-    def list_on_epoch_begin_event_listener(self) -> Iterable[OnEpochBeginEndEventCallback]:
+    def list_on_epoch_begin_event_listener(self) -> Sequence[OnEpochBeginEndEventCallback]:
         return self._epoch_begin_event.list()
 
     def unregister_on_epoch_begin_event_listener(self, handle: int):
@@ -81,7 +81,7 @@ class EpochBasedTrainerEventListenerRegistry:
     def register_on_epoch_end_event_listener(self, listener: OnEpochBeginEndEventCallback, priority: int = 50) -> int:
         return self._epoch_end_event.register(listener, priority)
 
-    def list_on_epoch_end_event_listener(self) -> Iterable[OnEpochBeginEndEventCallback]:
+    def list_on_epoch_end_event_listener(self) -> Sequence[OnEpochBeginEndEventCallback]:
         return self._epoch_end_event.list()
 
     def unregister_on_epoch_end_event_listener(self, handle: int):
@@ -90,7 +90,7 @@ class EpochBasedTrainerEventListenerRegistry:
     def register_on_iteration_begin_event_listener(self, listener: OnIterationBeginEndEventCallback, priority: int = 50) -> int:
         return self._iteration_begin_event.register(listener, priority)
 
-    def list_on_iteration_begin_event_listener(self) -> Iterable[OnIterationBeginEndEventCallback]:
+    def list_on_iteration_begin_event_listener(self) -> Sequence[OnIterationBeginEndEventCallback]:
         return self._iteration_begin_event.list()
 
     def unregister_on_iteration_begin_event_listener(self, handle: int):
@@ -99,7 +99,7 @@ class EpochBasedTrainerEventListenerRegistry:
     def register_on_iteration_end_event_listener(self, listener: OnIterationBeginEndEventCallback, priority: int = 50) -> int:
         return self._iteration_end_event.register(listener, priority)
 
-    def list_all_on_iteration_end_event_listener(self) -> Iterable[OnIterationBeginEndEventCallback]:
+    def list_all_on_iteration_end_event_listener(self) -> Sequence[OnIterationBeginEndEventCallback]:
         return self._iteration_end_event.list()
 
     def unregister_on_iteration_end_event_listener(self, handle: int):
@@ -178,7 +178,7 @@ class BatchCollectiveCommunicationServiceOperatorGatherRegistry:
         self.functions = {}
         self._index = 0
 
-    def register(self, data_prepare_fn: Callable[[], Any], on_gathered_fn: Callable[[Sequence[Any]], None], dst_rank: int = 0, priority: int = 50) -> int:
+    def register(self, data_prepare_fn: Callable[[], Any], on_gathered_fn: Callable[[Sequence[Any]], None], dst_rank: int, priority: int = 50) -> int:
         handle = self._index
         self.functions[handle] = (BatchCollectiveCommunicationServiceOperatorGatherRegistry._Parameter(data_prepare_fn, on_gathered_fn, dst_rank), priority)
         self._index += 1

@@ -104,7 +104,7 @@ def construct_single_object_tracking_dataset_memory_mapped_from_base_video_datas
                         continue
                     current_frame_optional_object_attributes[base_object_key] = base_object_value
                 if len(current_frame_optional_object_attributes) > 0:
-                    optional_frame_attributes['object'] = current_frame_optional_object_attributes
+                    current_optional_frame_attributes['object'] = current_frame_optional_object_attributes
 
                 if 'bounding_box' in base_object:
                     frame_bounding_box, frame_bounding_box_validity = memory_mapped_constructor_get_bounding_box(

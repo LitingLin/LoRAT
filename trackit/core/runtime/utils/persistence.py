@@ -26,3 +26,5 @@ def load_objects(path: str, engine: str):
         import pickle
         with open(path, 'rb') as f:
             return pickle.load(f)
+    else:
+        raise ValueError(f'Unsupported engine: {engine}')

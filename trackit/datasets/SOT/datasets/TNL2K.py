@@ -9,7 +9,7 @@ class TNL2K_Seed(BaseSeed):
                 root_path = self.get_path_from_config('TNL2K_TRAIN_PATH')
             if data_split == 'test':
                 root_path = self.get_path_from_config('TNL2K_TEST_PATH')
-        super().__init__('TNL2K', root_path, data_split, ('train', 'test'), 6)
+        super().__init__('TNL2K', root_path, data_split, ('train', 'test'))
 
     def construct(self, constructor):
         from .Impl.TNL2K import construct_TNL2K

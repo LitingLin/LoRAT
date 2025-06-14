@@ -1,26 +1,26 @@
 import torch
 import gc
-from typing import Protocol, Sequence, Any, Optional, Iterable
+from typing import Protocol, MutableSequence, Any, Iterable
 
-from trackit.miscellanies.torch.tensor_move_helper import get_torch_tensor_list_from_object, replace_torch_tensor_in_object
+from trackit.miscellanies.torch.nested_tensor_helper import extract_torch_tensor_list_from_object, rebuild_object_with_given_torch_tensor_list
 
 
 class TensorFilter(Protocol):
-    def select(self, data: Any) -> Sequence[torch.Tensor]:
+    def select(self, data: Any) -> MutableSequence[torch.Tensor]:
         ...
 
-    def rearrange(self, data: Any, device_tensors: Sequence[torch.Tensor]) -> Any:
+    def rearrange(self, data: Any, device_tensors: MutableSequence[torch.Tensor]) -> Any:
         ...
 
 
 class DefaultTensorFilter:
     @staticmethod
     def select(data):
-        return get_torch_tensor_list_from_object(data)
+        return extract_torch_tensor_list_from_object(data)
 
     @staticmethod
     def rearrange(data, device_tensors):
-        return replace_torch_tensor_in_object(data, device_tensors)
+        return rebuild_object_with_given_torch_tensor_list(data, device_tensors)
 
 
 class TensorFilteringByIndices:
@@ -33,7 +33,7 @@ class TensorFilteringByIndices:
         for index in self.indices:
             datum = data[index]
             if datum is not None:
-                device_tensors = get_torch_tensor_list_from_object(datum)
+                device_tensors = extract_torch_tensor_list_from_object(datum)
                 split_points.append(len(device_tensors))
                 device_tensor_list.extend(device_tensors)
         return device_tensor_list
@@ -42,7 +42,7 @@ class TensorFilteringByIndices:
         collated = []
         for index, datum in enumerate(data):
             if index in self.indices and datum is not None:
-                datum = replace_torch_tensor_in_object(datum, device_tensors)
+                datum = rebuild_object_with_given_torch_tensor_list(datum, device_tensors)
             collated.append(datum)
         return collated
 

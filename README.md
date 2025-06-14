@@ -11,6 +11,29 @@ This is the official repository for **ECCV 2024** [Tracking Meets LoRA: Faster T
 [[Poster](https://raw.githubusercontent.com/wiki/LitingLin/LoRAT/poster.pdf)]
 
 ![banner](https://raw.githubusercontent.com/wiki/LitingLin/LoRAT/images/banner.svg)
+
+Update: results on VastTrack
+
+| Variant | SUC  |  P   | P norm |
+|:-------:|:----:|:----:|:------:|
+|  B-224  | 38.7 | 37.8 |  41.1  |
+|  B-378  | 40.4 | 40.7 |  43.4  |
+|  L-224  | 41.6 | 42.3 |  45.0  |
+|  L-378  | 43.9 | 45.8 |  47.7  |
+|  g-224  | 43.0 | 44.7 |  47.2  |
+|  g-378  | 46.0 | 48.8 |  50.4  |
+
+[June 14, 2025] 
+Update codebase:
+- Resumable checkpointing.
+- Fix grad accumulation.
+- Refactor the tracker evaluation pipeline.
+- Add support for compiled autograd.
+- Data pipeline support specify dtype, BF16 training, FP16 inference is allowed.
+- Initial support for deepspeed.
+- CPU inference enhancements.
+- MPS on macOS supported.
+- Some minor bug fixes and code refactoring.
 ## Prerequisites
 ### Environment
 Assuming you have a working python environment with pip installed.
@@ -108,7 +131,7 @@ wandb login
 
 Note: Our code performs evaluation automatically when model training is complete.
 
-- **Model weight** is saved in ```/path/to/output/run_id/checkpoint/epoch_{last}/model.bin```.
+- **Model weight** is saved in ```/path/to/output/run_id/checkpoint/epoch_{last}/model.safetensors```.
 - **Performance metrics** can be found on terminal output and wandb dashboard.
 - **Tracking results** are saved in ```/path/to/output/run_id/eval/epoch_{last}/```.
 
@@ -202,6 +225,30 @@ python vot_main.py vots2024/main LoRAT dinov2 /path/to/output --mixin giant_378 
 ## Custom Dataset
 [This page](DATASET.md) describes how to create a custom dataset for training and evaluation.
 
+## Resumable Checkpointing
+Add ```--mixin resumable``` to the command line to enable resumable checkpointing. This allows you to resume training from the last saved checkpoint if the training process is interrupted.
+
+```shell
+./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin resumable
+```
+
+Or you can set the default value in ```run.yaml``` to:
+```yaml
+checkpoint:
+  - type: "regular"
+    epoch_trigger:
+      interval: 10
+      last: true
+    resumable: true # false --> true
+    max_to_keep: 5
+```
+
+Load the last checkpoint by specifying the `--resume` argument and the `--wegiht_path` argument:
+
+```shell
+./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin resumable --weight_path /path/to/output/run_id/checkpoint/epoch_{last}/model.bin --resume /path/to/output/run_id/checkpoint/epoch_{last}/state.tar
+```
+Note that the `--weight_path` argument is required to load the model weights, while the `--resume` argument is used to load the training state.
 ## Citation
 ```bibtex
 @inproceedings{lorat,

@@ -145,6 +145,10 @@ def prepare_siamfc_cropping_with_augmentation(
 
 
 def apply_siamfc_cropping_to_boxes(boxes: np.ndarray, cropping_params: np.ndarray):
+    '''
+    boxes: (4,) or (N,4)
+    cropping_params: (2,2) or (N,2,2)
+    '''
     if boxes.ndim == 1:
         assert cropping_params.ndim == 2
         scale, translation = cropping_params
@@ -168,5 +172,21 @@ def reverse_siamfc_cropping_params(cropping_params: np.ndarray) -> np.ndarray:
 
 
 def scale_siamfc_cropping_params(cropping_params: np.ndarray, old_output_size: np.ndarray, new_output_size: np.ndarray):
+    '''
+    cropping_params: (2, 2) or (N, 2, 2)
+    old_output_size: (2,) or (N, 2)
+    new_output_size: (2,) or (N, 2)
+    '''
     scale_factor = new_output_size / old_output_size
-    return cropping_params * scale_factor
+    if cropping_params.ndim == 2:
+        assert scale_factor.ndim == 1
+        return cropping_params * np.expand_dims(scale_factor, axis=0)
+    elif cropping_params.ndim == 3:
+        if scale_factor.ndim == 1:
+            return cropping_params * np.expand_dims(scale_factor, axis=(0, 1))
+        elif scale_factor.ndim == 2:
+            return cropping_params * np.expand_dims(scale_factor, axis=1)
+        else:
+            raise ValueError(f"Invalid scale_factor shape: {scale_factor.shape}")
+    else:
+        raise ValueError(f"Invalid cropping_params shape: {cropping_params.shape}")

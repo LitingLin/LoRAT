@@ -1,4 +1,4 @@
-from typing import Sequence, Mapping, Tuple, Optional
+from typing import Sequence, Mapping, Optional
 import numpy as np
 from trackit.data.utils.data_source_matcher.builder import build_data_source_matcher
 from trackit.core.operator.numpy.bbox.rasterize import bbox_rasterize
@@ -27,7 +27,7 @@ _builtin_rules = (
         },
         'action': {
             'rasterize': False,
-            'name_prefix': 'uav_'
+            'sequence_name_prefix': 'uav_'
         }
     }, {
         'match': {
@@ -35,7 +35,7 @@ _builtin_rules = (
         },
         'action': {
             'rasterize': False,
-            'name_prefix': 'tpl_'
+            'sequence_name_prefix': 'tpl_'
         }
     }, {
         'match': {
@@ -43,7 +43,7 @@ _builtin_rules = (
         },
         'action': {
             'rasterize': False,
-            'name_prefix': 'nfs_'
+            'sequence_name_prefix': 'nfs_'
         }
     }, {
         'match':
@@ -96,8 +96,8 @@ class ExternalToolkitCompatibilityHelper:
             predicted_bboxes[:, 3] += coordinate_adjustment[3]
         if adjustment_actions.get('rasterize', False):
             predicted_bboxes = bbox_rasterize(predicted_bboxes)
-        if 'name_prefix' in adjustment_actions and sequence_name is not None:
-            sequence_name = adjustment_actions['name_prefix'] + sequence_name
+        if 'sequence_name_prefix' in adjustment_actions and sequence_name is not None:
+            sequence_name = adjustment_actions['sequence_name_prefix'] + sequence_name
         if sequence_name is not None:
             return sequence_name, predicted_bboxes
         return predicted_bboxes

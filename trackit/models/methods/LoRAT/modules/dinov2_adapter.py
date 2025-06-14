@@ -4,7 +4,7 @@
 import torch
 import torch.nn as nn
 from torch import Tensor
-from trackit.models.backbone.dinov2 import Block
+from trackit.models.backbone.dinov2.layers.block import Block
 
 
 class DINOv2AdapterBlock(nn.Module):

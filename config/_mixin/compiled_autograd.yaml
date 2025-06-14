@@ -1,0 +1,11 @@
+- path: "run.runner.train.torch_compile"
+  value:
+    enabled: true
+    parameters:
+      fullgraph: false
+      mode: "default"
+    compiled_autograd:
+      enabled: true
+      parameters:
+        fullgraph: true
+        mode: "max-autotune-no-cudagraphs"

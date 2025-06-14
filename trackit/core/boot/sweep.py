@@ -1,7 +1,9 @@
 import wandb
 import os
-from .funcs.utils.custom_yaml_loader import load_yaml
 from .funcs.sweep import get_sweep_config
+from .funcs.utils.output_stream_redirector import OutputStreamRedirector
+from trackit.core.runtime.utils.custom_yaml_loader import load_yaml
+from trackit.core.runtime.global_constant import get_global_constant
 
 
 def _get_program_command(args, unknown_args):
@@ -30,8 +32,8 @@ def setup_sweep(args, unknown_args, project_name):
 
 def sweep_main(args, unknown_args):
     args.config_path = os.path.join(args.root_path, 'config')
-    network_config_path = os.path.join(args.config_path, args.method_name, args.config_name, 'config.yaml')
-    wandb_project_name = load_yaml(network_config_path)['logging']['category']
+    config_path = os.path.join(args.config_path, args.method_name, args.config_name, 'config.yaml')
+    wandb_project_name = load_yaml(config_path, get_global_constant())['logging']['category']
 
     if args.run_id is None:
         from .funcs.utils.run_id import generate_run_id
@@ -41,8 +43,9 @@ def sweep_main(args, unknown_args):
         if not os.path.exists(args.output_dir):
             os.makedirs(args.output_dir, exist_ok=True)
 
-    if args.sweep_id is None:
-        setup_sweep(args, unknown_args, wandb_project_name)
+    with OutputStreamRedirector(os.path.join(args.output_dir, 'log.txt')):
+        if args.sweep_id is None:
+            setup_sweep(args, unknown_args, wandb_project_name)
 
-    if args.agents_run_limit != 0:
-        wandb.agent(args.sweep_id, project=wandb_project_name, count=args.agents_run_limit)
+        if args.agents_run_limit != 0:
+            wandb.agent(args.sweep_id, project=wandb_project_name, count=args.agents_run_limit)

@@ -4,17 +4,19 @@ from typing import Sequence
 
 from trackit.datasets.common.cache_path import prepare_dataset_cache_path
 from trackit.datasets.common.types.exception import IncompatibleError
+from trackit.datasets.common.seed import BaseSeed
 
 
 __all__ = ['DatasetFactory']
 
-_base_impl_cache_extension = '.pkl'
-_base_impl_cache_extension_yaml = '.yaml'
-_memory_mapped_impl_cache_extension = '.np'
+_base_impl_cache_file_extension = '.pkl'
+_base_impl_cache_file_extension_yaml = '.yaml'
+_memory_mapped_impl_cache_file_extension = '.np'
 
 
 class _DatasetFactory:
-    def __init__(self, seed, base_dataset_class, base_dataset_constructor, filter_func, specialized_dataset_class, specialized_dataset_converter):
+    def __init__(self, seed: BaseSeed, base_dataset_class, base_dataset_constructor, filter_func,
+                 specialized_dataset_class, specialized_dataset_converter):
         self.seed = seed
         self.base_dataset_class = base_dataset_class
         self.base_dataset_constructor = base_dataset_constructor
@@ -26,18 +28,21 @@ class _DatasetFactory:
         if len(self.seed.data_split) == 0:
             return self.seed.name
         else:
-            return self.seed.name + '-' + ''.join(self.seed.data_split)
+            return self.seed.name + '-' + '+'.join(self.seed.data_split)
 
     def construct(self, filters=None, cache_meta_data=False, dump_human_readable=False):
         if filters is not None and len(filters) == 0:
             filters = None
 
-        dataset, cache_file_prefix = _try_load_from_cache(self.seed, self.specialized_dataset_class, _memory_mapped_impl_cache_extension, filters)
+        dataset, cache_file_prefix = _try_load_from_cache(self.seed, self.specialized_dataset_class,
+                                                          _memory_mapped_impl_cache_file_extension, filters)
         if dataset is not None:
             return dataset
         base_dataset = self.construct_base_interface(filters, cache_meta_data, dump_human_readable)
-        dataset = self.specialized_dataset_class(base_dataset.root_path,
-                                                 self.specialized_dataset_converter(base_dataset.dataset, cache_file_prefix + _memory_mapped_impl_cache_extension))
+        dataset = self.specialized_dataset_class(
+            base_dataset.root_path,
+            self.specialized_dataset_converter(base_dataset.dataset,
+                                               cache_file_prefix + _memory_mapped_impl_cache_file_extension))
         return dataset
 
     @staticmethod
@@ -60,12 +65,13 @@ class _DatasetFactory:
     @staticmethod
     def _dump(dataset, cache_path_prefix, dump, dump_human_readable):
         if dump:
-            _DatasetFactory._dump_base_dataset(dataset, cache_path_prefix + _base_impl_cache_extension)
+            _DatasetFactory._dump_base_dataset(dataset, cache_path_prefix + _base_impl_cache_file_extension)
         if dump_human_readable:
-            _DatasetFactory._dump_base_dataset_yaml(dataset, cache_path_prefix + _base_impl_cache_extension_yaml)
+            _DatasetFactory._dump_base_dataset_yaml(dataset, cache_path_prefix + _base_impl_cache_file_extension_yaml)
 
     def _construct_base_interface_unfiltered(self, make_cache=False, dump_human_readable=False):
-        dataset, cache_file_prefix = _try_load_from_cache(self.seed, self.base_dataset_class, _base_impl_cache_extension, None)
+        dataset, cache_file_prefix = _try_load_from_cache(self.seed, self.base_dataset_class,
+                                                          _base_impl_cache_file_extension, None)
         if dataset is not None:
             self._dump(dataset, cache_file_prefix, False, dump_human_readable)
             return dataset
@@ -74,6 +80,7 @@ class _DatasetFactory:
         with self.base_dataset_constructor(dataset.dataset, dataset.root_path, self.seed.version) as constructor:
             constructor.set_name(self.seed.name)
             constructor.set_split(self.seed.data_split)
+            constructor.set_extra_flags(self.seed.extra_flags)
             self.seed.construct(constructor)
         self._dump(dataset, cache_file_prefix, make_cache, dump_human_readable)
         return dataset
@@ -82,7 +89,8 @@ class _DatasetFactory:
         if filters is not None and len(filters) == 0:
             filters = None
 
-        dataset, cache_file_prefix = _try_load_from_cache(self.seed, self.base_dataset_class, _base_impl_cache_extension, filters)
+        dataset, cache_file_prefix = _try_load_from_cache(self.seed, self.base_dataset_class,
+                                                          _base_impl_cache_file_extension, filters)
         if dataset is not None:
             return dataset
         dataset = self._construct_base_interface_unfiltered(make_cache, dump_human_readable)
@@ -94,7 +102,8 @@ class _DatasetFactory:
 
 
 class DatasetFactory:
-    def __init__(self, seeds, base_dataset_class, base_dataset_constructor, filter_func, specialized_dataset_class, specialized_dataset_converter):
+    def __init__(self, seeds, base_dataset_class, base_dataset_constructor, filter_func,
+                 specialized_dataset_class, specialized_dataset_converter):
         expanded_seeds = []
         for seed in seeds:
             assert seed.data_split is None or isinstance(seed.data_split, Sequence)
@@ -106,7 +115,8 @@ class DatasetFactory:
                     new_seed.data_split = (data_split,)
                     expanded_seeds.append(new_seed)
 
-        self.factories = [_DatasetFactory(seed, base_dataset_class, base_dataset_constructor, filter_func, specialized_dataset_class, specialized_dataset_converter)
+        self.factories = [_DatasetFactory(seed, base_dataset_class, base_dataset_constructor,
+                                          filter_func, specialized_dataset_class, specialized_dataset_converter)
                           for seed in expanded_seeds]
 
     def construct(self, filters=None, cache_base_format=False, dump_human_readable=False):
@@ -115,16 +125,21 @@ class DatasetFactory:
 
         datasets = [factory.construct(filters, cache_base_format, dump_human_readable) for factory in self.factories]
 
-        print('Done')
+        print('Done\n', end='')
         return datasets
 
     def construct_base_interface(self, filters=None, make_cache=False, dump_human_readable=False):
-        return [factory.construct_base_interface(filters, make_cache, dump_human_readable) for factory in self.factories]
+        return [factory.construct_base_interface(filters, make_cache, dump_human_readable)
+                for factory in self.factories]
 
 
-def _try_load_from_cache(seed, dataset_class, cache_extension, filters):
-    cache_folder_path, cache_file_name = prepare_dataset_cache_path(dataset_class.__name__, seed.name, seed.data_split, filters)
-    cache_file_path = os.path.join(cache_folder_path, cache_file_name + cache_extension)
+def _try_load_from_cache(seed: BaseSeed, dataset_class, cache_file_extension: str, filters):
+    cache_folder_path, cache_file_name = prepare_dataset_cache_path(dataset_class.__name__,
+                                                                    seed.name,
+                                                                    seed.data_split,
+                                                                    seed.extra_flags,
+                                                                    filters)
+    cache_file_path = os.path.join(cache_folder_path, cache_file_name + cache_file_extension)
     if os.path.exists(cache_file_path):
         try:
             dataset = dataset_class.load(seed.root_path, cache_file_path)

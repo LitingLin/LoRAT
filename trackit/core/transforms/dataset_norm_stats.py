@@ -19,6 +19,8 @@ def get_dataset_norm_stats_transform(dataset: str, inplace: bool):
         return transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD, inplace=inplace)
     elif dataset == 'openai_clip':
         return transforms.Normalize(mean=OPENAI_CLIP_MEAN, std=OPENAI_CLIP_STD, inplace=inplace)
+    elif dataset == 'none':
+        return transforms.Lambda(lambda x: x if inplace else x.clone())
     else:
         raise NotImplementedError()
 
@@ -42,5 +44,7 @@ def get_dataset_norm_stats_transform_reversed(dataset: str, inplace: bool):
     elif dataset == 'openai_clip':
         return transforms.Normalize(mean=[-m / s for m, s in zip(OPENAI_CLIP_MEAN, OPENAI_CLIP_STD)],
                                     std=[1 / s for s in OPENAI_CLIP_STD], inplace=inplace)
+    elif dataset == 'none':
+        return transforms.Lambda(lambda x: x if inplace else x.clone())
     else:
         raise NotImplementedError()

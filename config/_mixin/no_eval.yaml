@@ -1,0 +1,14 @@
+- path: "run.data"
+  action: "remove"
+  value:
+    - "test"
+    - "eval"
+- path: "run.runner"
+  action: "remove"
+  value:
+    - "test"
+- path: "run.task"
+  action: "remove"
+  value:
+    - "test"
+    - "eval"

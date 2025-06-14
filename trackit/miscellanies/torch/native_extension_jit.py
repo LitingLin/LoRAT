@@ -20,11 +20,11 @@ def load_cuda_extension(name: str, sources: Union[str, List[str]], arch_match_lo
         setup_compilation_env()
         _cxx_compiler_setup = True
     if arch_match_local_machine:
-        set_env_TORCH_CUDA_ARCH_LIST_with_local_machine_cuda_arch_list()
+        old_env_value = set_env_TORCH_CUDA_ARCH_LIST_with_local_machine_cuda_arch_list()
 
     module = torch.utils.cpp_extension.load(name, sources, extra_cflags=list(get_extra_cflags()), extra_ldflags=list(get_extra_ldflags()), extra_cuda_cflags=list(get_extra_cuda_cflags()), verbose=verbose)
 
     if arch_match_local_machine:
-        unset_env_TORCH_CUDA_ARCH_LIST()
+        unset_env_TORCH_CUDA_ARCH_LIST(old_env_value)
 
     return module

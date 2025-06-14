@@ -1,5 +1,5 @@
-from typing import Optional, Sequence, Tuple
-from ..utils.writer import FolderWriter, ZipfileWriter
+from typing import Optional
+from ..utils.writer import FolderWriter
 from trackit.core.operator.numpy.bbox.format import bbox_xyxy_to_xywh
 import pickle
 import numpy as np

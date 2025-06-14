@@ -7,10 +7,10 @@ class TrackingNet_Seed(BaseSeed):
         if root_path is None:
             root_path = self.get_path_from_config('TrackingNet_PATH')
         name = 'TrackingNet'
+        flags = []
         if enable_set_ids is not None:
-            name += '-'
-            name += '_'.join([str(v) for v in enable_set_ids])
-        super().__init__(name, root_path, data_split, ('train', 'test'), 3)
+            flags.append('subset' + '_'.join([str(v) for v in enable_set_ids]))
+        super().__init__(name, root_path, data_split, ('train', 'test'), extra_flags=flags)
         self.sequence_category_mapping_file_path = sequence_category_mapping_file_path
         self.enable_set_ids = enable_set_ids
 

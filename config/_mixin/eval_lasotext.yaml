@@ -1,0 +1,18 @@
+!concat
+- !include "evaluation.yaml"
+- - path: "run.data.eval.source.parameters"
+    value: !include "../_dataset/test_lasot_ext.yaml"
+  - path: "run.data.eval.result_collector.dispatch"
+    value:
+      - match:
+          name_regex: ".*"
+        handlers:
+          - type: "one_pass_evaluation_compatible"
+          - type: "external/PyTracking"
+            file_name: "results"
+  - path: "run.data.eval.sampler"
+    value:
+      type: "distributed_dynamic_scheduling"
+      shuffle: false
+  - path: "run.profiling.enabled"
+    value: false

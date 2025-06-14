@@ -5,8 +5,7 @@ import numpy as np
 from typing import Optional
 from trackit.core.transforms.dataset_norm_stats import get_dataset_norm_stats_transform_reversed
 
-from trackit.data.methods.siamese_tracker_train._types import SOTFrameInfo
-from trackit.data.methods.siamese_tracker_train.worker import SiameseTrainingPair
+from ..._types import SOTFrameInfo, SiameseTrainingPair
 
 
 def _get_original_image(image: torch.Tensor, bbox: Optional[np.ndarray], dataset_norm_stats: Optional[str]) -> torch.Tensor:

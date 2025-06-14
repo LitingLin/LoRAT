@@ -6,17 +6,29 @@ from ...epoch_metric import get_current_epoch_metrics
 
 
 class LocalMetricLoggerWrapper(MetricLoggerInterface):
-    def __init__(self, print_freq: int, prefix: Optional[str], epoch_average_as_summary: bool, header: str, monitor_cuda_device_memory: bool=False):
+    def __init__(self, print_freq: int, prefix: Optional[str], epoch_average_as_summary: bool, header: str,
+                 monitor_system_resources: bool=False,
+                 monitor_system_health_sensors: bool=False,
+                 monitor_cuda_device: bool=False,
+                 monitor_mps_device: bool=False):
         self.print_freq = print_freq
         self.prefix = prefix
         self.epoch_average_as_summary = epoch_average_as_summary
         self.header = header
         self.no_name_prefix_meters = set()
         self.logger = LocalMetricLogger(delimiter=' ', print_freq=print_freq)
-        # self.logger.enable_monitoring_cpu_percent()
-        self.logger.enable_monitoring_system_total_resident_set_size()
-        if monitor_cuda_device_memory:
-            self.logger.enable_monitoring_cuda_device_memory_allocated()
+        if monitor_system_resources:
+            self.logger.enable_monitoring_cpu_percent = True
+            self.logger.enable_monitoring_system_total_resident_set_size = True
+            if monitor_cuda_device:
+                self.logger.enable_monitoring_cuda_device_memory_allocated = True
+            if monitor_mps_device:
+                self.logger.enable_monitoring_mps_device_memory_allocated = True
+        if monitor_system_health_sensors:
+            self.logger.enable_monitoring_cpu_package_temperature = True
+            self.logger.enable_monitoring_memory_module_temperature = True
+            if monitor_cuda_device:
+                self.logger.enable_monitoring_cuda_device_temperature = True
         self.summary = {}
 
     def on_epoch_begin(self, epoch: int) -> None:

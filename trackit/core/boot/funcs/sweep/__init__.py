@@ -1,9 +1,8 @@
-import math
 import torch.distributed
 import os
-from trackit.miscellanies.torch.distributed import is_main_process, is_dist_initialized
-from ...funcs.utils.custom_yaml_loader import load_yaml
-from ...funcs.mixin import apply_mixin_rules
+from trackit.miscellanies.torch.distributed import is_rank_0_process, is_dist_initialized
+from ..utils.config_mixin import apply_mixin_rules
+from trackit.core.runtime.utils.custom_yaml_loader import load_yaml
 
 
 def get_sweep_config(args):
@@ -20,7 +19,7 @@ def get_sweep_config(args):
 
 
 def prepare_sweep(args, wandb_instance, config):
-    if is_main_process():
+    if is_rank_0_process():
         assert wandb_instance is not None, "wandb must be enabled for hyper-parameter search"
         this_run_config = wandb_instance.config.as_dict()
     else:

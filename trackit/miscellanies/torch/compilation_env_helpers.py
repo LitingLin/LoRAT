@@ -1,6 +1,6 @@
 import os
 import sys
-from trackit.miscellanies.machine.cpu_info import is_x86, is_arm, is_64bits, get_cpu_features
+from trackit.miscellanies.system.machine.cpu_info import is_x86, is_arm, is_64bits, get_x86_cpu_features
 
 
 _is_env_setup = False
@@ -63,13 +63,16 @@ _extra_nvcc_flags = None
 
 
 def _get_msvc_arch_flag():
-    cpu_features = get_cpu_features()
-    if cpu_features.has_avx512f and cpu_features.has_avx512cd and cpu_features.has_avx512bw and cpu_features.has_avx512dq and cpu_features.has_avx512vl:
-        return '/arch:AVX512'
-    elif cpu_features.has_avx2:
-        return '/arch:AVX2'
-    elif cpu_features.has_avx:
-        return '/arch:AVX'
+    if is_x86:
+        cpu_features = get_x86_cpu_features()
+        if cpu_features.has_avx512f and cpu_features.has_avx512cd and cpu_features.has_avx512bw and cpu_features.has_avx512dq and cpu_features.has_avx512vl:
+            return '/arch:AVX512'
+        elif cpu_features.has_avx2:
+            return '/arch:AVX2'
+        elif cpu_features.has_avx:
+            return '/arch:AVX'
+        else:
+            return None
     else:
         return None
 
@@ -105,12 +108,16 @@ def set_env_TORCH_CUDA_ARCH_LIST_with_local_machine_cuda_arch_list():
     arch_list = get_local_machine_cuda_arch_list()
     if arch_list is None:
         return
+    old_env_torch_cuda_arch_list = os.environ.get('TORCH_CUDA_ARCH_LIST')
     os.environ['TORCH_CUDA_ARCH_LIST'] = ';'.join('{}.{}'.format(major, minor) for major, minor in arch_list)
+    return old_env_torch_cuda_arch_list
 
 
-def unset_env_TORCH_CUDA_ARCH_LIST():
-    if 'TORCH_CUDA_ARCH_LIST' in os.environ:
+def unset_env_TORCH_CUDA_ARCH_LIST(new_value = None):
+    if new_value is None and 'TORCH_CUDA_ARCH_LIST' in os.environ:
         del os.environ['TORCH_CUDA_ARCH_LIST']
+    else:
+        os.environ['TORCH_CUDA_ARCH_LIST'] = new_value
 
 
 def init_extra_build_flags(fast_math=False, lto=True, with_symbols=False, with_machine_cuda_arch_flags=True):

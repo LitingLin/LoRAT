@@ -1,4 +1,4 @@
-from typing import Optional, Sequence, Mapping
+from typing import Optional, Sequence
 import zipfile
 import io
 import os

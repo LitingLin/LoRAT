@@ -1,8 +1,8 @@
 from trackit.datasets.common.specialization.memory_mapped.engine import ListMemoryMapped
-from trackit.miscellanies.operating_system.path import join_paths
+from trackit.miscellanies.system.operating_system.path import join_paths
 from trackit.datasets.common.specialization.memory_mapped.dataset import LazyAttributesLoader, DummyAttributesLoader, MemoryMappedDataset
 
-__version__ = 4
+__version__ = 5
 __all__ = ['ImageClassificationDataset_MemoryMapped']
 
 

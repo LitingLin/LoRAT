@@ -1,11 +1,10 @@
 import concurrent.futures
-import torch.utils.data.dataset
 from typing import Sequence, Optional
 import time
 import torch
 
 from trackit.core.runtime.metric_logger import get_current_local_metric_logger
-from trackit.data import HostDataPipeline
+from trackit.data import MainProcessDataPipeline
 from trackit.data.sampling.per_frame.distributed_dynamic_eval_task_scheduling.distributed_evaluation_task_scheduler import DistributedTrackerEvaluationTaskDynamicSchedulerClient, EvaluationTask
 from trackit.miscellanies.torch.distributed import get_rank
 from trackit.data.source import TrackingDataset, TrackingDataset_FrameInTrack
@@ -20,7 +19,7 @@ from .transform import SiameseTrackerEval_DataTransform
 def _prepare_frame_context(frame: TrackingDataset_FrameInTrack):
     gt_bbox = frame.get_bounding_box() if frame.get_existence_flag() else None
     image_getter_fn = get_frame_decoder(frame)
-    return SiameseTrackerEvalDataWorker_FrameContext(frame.get_frame_index(), image_getter_fn, gt_bbox)
+    return SiameseTrackerEvalDataWorker_FrameContext(frame.get_frame_index(), image_getter_fn, gt_bbox, None)
 
 
 def _prepare(batch_index: int, evaluation_task: EvaluationTask, datasets: Sequence[TrackingDataset]):
@@ -97,13 +96,13 @@ class SiameseTrackEvaluationDataInputWorker(torch.utils.data.dataset.Dataset):
         return TrackerEvalData(batch, miscellanies)
 
 
-class SiameseTrackEvaluationHostLoggingHook(HostDataPipeline):
+class SiameseTrackEvaluationMainProcessLoggingHook(MainProcessDataPipeline):
     def __init__(self, num_io_threads: int):
         self._num_io_threads = num_io_threads
 
     def on_epoch_begin(self):
         if self._num_io_threads > 0:
-            get_current_local_metric_logger().set_metric_format('io_wait', no_prefix=True)
+            get_current_local_metric_logger().set_metric_format('io_wait', no_prefix=True, format='{median:.2f}')
 
     def pre_process(self, input_data: Optional[TrackerEvalData]) -> Optional[TrackerEvalData]:
         if input_data is None:

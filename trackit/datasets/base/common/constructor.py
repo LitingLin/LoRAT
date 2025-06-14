@@ -1,12 +1,14 @@
 import os
+import sys
 from typing import Optional, Sequence, Tuple, Union
-from PIL import Image, UnidentifiedImageError
+
 from tqdm import tqdm
+from PIL import Image, UnidentifiedImageError
 
 from trackit.datasets.common.types.bounding_box import BoundingBoxFormat, BoundingBoxCoordinateSystem
 import trackit.datasets.base.video.dataset as video_dataset
 import trackit.datasets.base.image.dataset as image_dataset
-from trackit.miscellanies.operating_system.interface import IS_WIN32
+from trackit.miscellanies.system.operating_system.interface import IS_WIN32
 
 image_dataset_key_exclude_list = ('name', 'split', 'version', 'filters', 'type', 'category_id_name_map', 'images', 'context')
 image_dataset_image_key_exclude_list = ('size', 'path', 'objects', 'category_id')
@@ -29,7 +31,7 @@ class DatasetProcessBar:
 
     def _construct_bar_if_not_exists(self):
         if self.pbar is None:
-            self.pbar = tqdm(total=self.total)
+            self.pbar = tqdm(total=self.total, file=sys.__stderr__)
             self._update_pbar_desc()
 
     def set_total(self, total: int):
@@ -199,7 +201,6 @@ def convert_image_path_as_posix_stype(image: dict):
     image['path'] = image['path'].replace('\\', '/')
 
 
-
 class BaseDatasetSequenceConstructor:
     def __init__(self, sequence: dict, root_path: str, context: _DatasetConstructionContext):
         self.sequence = sequence
@@ -293,6 +294,9 @@ class _BaseDatasetConstructor:
     def set_split(self, splits: Tuple[str]):
         self.dataset['split'] = splits
         self.context.get_processing_bar().set_dataset_split(splits)
+
+    def set_extra_flags(self, flags: Sequence[str]):
+        self.dataset['extra_flags'] = flags
 
     def set_bounding_box_format(self, bounding_box_format: Union[BoundingBoxFormat, str]):
         if isinstance(bounding_box_format, str):

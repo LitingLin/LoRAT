@@ -1,0 +1,323 @@
+type: "default"
+
+num_epochs: 170
+
+profiling:
+  enabled: true
+  auto_mixed_precision:
+    enabled: true
+
+checkpoint:
+  - type: "regular"
+    epoch_trigger:
+      interval: 10
+      last: true
+    resumable: false
+    max_to_keep: 5
+
+task:
+  train:
+    is_train: true
+    data: "train"
+    runner: "train"
+    logging:
+      interval: 10
+      local:
+        header: "Epoch: [{epoch}]"
+      wandb:
+        with_epoch: true
+
+  val:
+    is_train: false
+    data: "val"
+    runner: "train"
+    logging:
+      interval: 10
+      metric_prefix: "val_"
+      local:
+        header: "Val"
+        auto_summary: true
+      wandb:
+        per_iteration_logging:
+          enabled: false
+        per_epoch_logging:
+          enabled: true
+          summary_method: "mean"
+
+  test:
+    is_train: false
+    data: "test"
+    runner: "test"
+    epoch_trigger:
+      last: true
+      interval: 10
+    logging:
+      interval: 100
+      metric_prefix: "test_"
+      local:
+        header: "Test"
+
+  eval:
+    is_train: false
+    data: "eval"
+    runner: "test"
+    epoch_trigger:
+      last: true
+    logging:
+      interval: 100
+      local:
+        header: "Eval"
+    batch_collective_communication:
+      type: "time"
+      interval: 10
+
+data:
+  train:
+    global_batch_size: 128
+    num_io_threads: !const "num_io_threads_per_worker"
+    num_workers: !const "num_train_workers"
+
+    type: "siamese_tracker_train"
+
+    source:
+      type: "dataset"
+      parameters:
+        !include "../../_dataset/train.yaml"
+
+    sampler:
+      type: "random"
+
+      samples_per_epoch: 131072
+      weight:
+        - match:
+            type: "dataset"
+            name: "GOT-10k"
+          value: 1.0
+        - match:
+            type: "dataset"
+            name: "LaSOT"
+          value: 1.0
+        - match:
+            type: "dataset"
+            name: "TrackingNet"
+          value: 1.0
+        - match:
+            type: "dataset"
+            name: "COCO"
+          value: 1.0
+
+    siamese_training_pair_sampling: &siamese_training_pair_sampling
+      positive_sample:
+        sample_mode: "interval"
+        max_gaps: 100
+
+    transform: &transform_options
+      type: "default"
+
+      SiamFC_cropping:
+        template:
+          area_factor: 2.
+        search_region:
+          area_factor: 4.
+          scale_jitter: 0.25
+          translation_jitter: 3
+          min_object_size: 10
+
+      augmentation:
+        - type: "horizontal_flip"
+          target: ["template", "search_region"]
+          probability: 0.5
+          joint: false
+        - type: "color_jitter"
+          target: ["template", "search_region"]
+          brightness: 0.4
+          contrast: 0.4
+          saturation: 0.4
+          joint: false
+        - type: "DeiT_3_aug"
+          target: ["template", "search_region"]
+          joint: true
+      plugin:
+        - type: "box_with_score_map_label_generation"
+        - type: "template_foreground_indicating_mask_generation"
+
+      visualize: false
+  val:
+    global_batch_size: 128
+    num_io_threads: !const "num_io_threads_per_worker"
+    num_workers: !const "num_val_workers"
+
+    type: "siamese_tracker_train"
+
+    source:
+      type: "dataset"
+      parameters:
+        !include "../../_dataset/val.yaml"
+
+    sampler:
+      type: "random"
+      samples_per_epoch: 4096
+
+    siamese_training_pair_sampling: *siamese_training_pair_sampling
+
+    transform: *transform_options
+
+  test:
+    batch_size: 32
+    num_io_threads: !const "num_io_threads_per_worker"
+    num_workers: !const "num_eval_workers"
+
+    type: "siamese_tracker_eval"
+
+    source:
+      type: "dataset"
+      parameters:
+        !include "../../_dataset/test-got10k-val.yaml"
+
+    sampler:
+      type: "distributed_dynamic_scheduling"
+      shuffle: false
+
+    transform:
+      type: "default"
+      template_area_factor: 2.0
+
+    result_collector:
+      async_worker: true
+      log_summary: false
+      dispatch:
+        - match:
+            name_regex: ".*"
+          handlers:
+            - type: "one_pass_evaluation_compatible"
+              file_name: "ope_results"
+
+  eval:
+    batch_size: 128
+    num_io_threads: !const "num_io_threads_per_worker"
+    num_workers: !const "num_eval_workers"
+
+    type: "siamese_tracker_eval"
+
+    source:
+      type: "dataset"
+      parameters:
+        !include "../../_dataset/test.yaml"
+
+    sampler:
+      type: "distributed_dynamic_scheduling"
+      shuffle: true
+      repeat_times:
+        - match:
+            type: "dataset"
+            name_regex: "LaSOT_Extension"
+          value: 3
+        - match:
+            type: "dataset"
+            name_regex: ".*"
+          value: 1
+
+    transform:
+      type: "default"
+      template_area_factor: 2.0
+
+    result_collector:
+      async_worker: true
+      log_summary: true
+      dispatch:
+        - match:
+            name: "GOT-10k"
+            split: "test"
+          handlers:
+            - type: "external/GOT10k"
+              file_name: "GOT10k-test"
+              bbox_rasterize: true
+        - match:
+            name: "TrackingNet"
+            split: "test"
+          handlers:
+            - type: "external/TrackingNet"
+              file_name: "TrackingNet-test"
+              bbox_rasterize: true
+        - match:
+            name_regex: ".*"
+          handlers:
+            - type: "one_pass_evaluation_compatible"
+            - type: "external/PyTracking"
+              file_name: "results"
+
+runner:
+  train:
+    type: "default_train"
+
+    optimization:
+      optimizer:
+        type: "AdamW"
+        lr: 1.e-4
+        weight_decay: 0.1
+        fused: false
+        per_parameter:
+          - type: "vit_lr_layer_decay"
+            first_layer:
+              - name_regex: "^patch_embed"
+              - name_regex: "^norm_pre"
+            blocks: "blocks"
+            lr_decay_rate: 0.7
+            zero_1d_params_weight_decay: true
+          - type: "zero_1d_param_weight_decay"
+          - name_regex: "embed"
+            weight_decay: 0.
+      grad_accumulation_steps: 1
+      max_grad_norm: 1.0
+      zero_grad_set_to_none: true
+      lr_scheduler:
+        type: "timm"
+        sched: "cosine"
+        per_iteration: true
+        parameters:
+          lr_min: 1.e-6
+          warmup_prefix: true
+          warmup_epochs: 2
+          warmup_lr: 1.e-7
+      auto_mixed_precision:
+        enabled: true
+        dtype: float16
+
+    torch_compile:
+      enabled: true
+    detect_unused_parameters: false
+
+    criteria:
+      type: "box_with_score_map"
+      classification:
+        type: "binary_cross_entropy"
+        # Disable IoU-aware classification score, since conv head need an extra structure to communicate between cls and reg branch, see GFocal v2.
+        iou_aware_classification_score: false
+        weight: 1.
+      bbox_regression:
+        type: "GIoU"
+        weight: 1.
+
+  test:
+    type: "default_eval"
+    inference_engine:
+      type: "plain"
+      auto_mixed_precision:
+        enabled: true
+      torch_compile:
+        enabled: false
+    evaluator:
+      type: "default"
+      pipeline:
+        type: "one_stream_tracker"
+        search_region_cropping:
+          type: "simple"
+          min_object_size: 10
+          area_factor: 4.0
+        post_process:
+          type: "box_with_score_map"
+          window_penalty: 0.45
+        visualization: false
+
+        plugin:
+          - type: "template_foreground_indicating_mask_generation"

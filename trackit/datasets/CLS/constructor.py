@@ -11,8 +11,7 @@ class ImageClassificationDatasetImageConstructor(BaseDatasetImageConstructor):
 
 class ImageClassificationDatasetImageConstructorGenerator(BaseDatasetImageConstructorGenerator):
     def __init__(self, image: dict, root_path: str, category_id_name_map: dict, context):
-        super(ImageClassificationDatasetImageConstructorGenerator, self).__init__(context)
-        self.image = image
+        super(ImageClassificationDatasetImageConstructorGenerator, self).__init__(image, context)
         self.root_path = root_path
         self.category_id_name_map = category_id_name_map
 

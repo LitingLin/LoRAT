@@ -1,16 +1,20 @@
 from tabulate import tabulate
+
+import torch
 from trackit.core.runtime.build_context import BuildContext
 from trackit.data.source.builder import build_data_source
 from trackit.data.sampling.per_sequence.builder import build_per_sequence_sampler
 from trackit.data.utils.dataloader import build_dataloader
 from trackit.data import DataPipeline
+from trackit.miscellanies.printing import pretty_format
 from trackit.miscellanies.torch.distributed import get_world_size
-from .worker import SiameseTrackerTrainingDataWorker, SiameseTrackerTrainingDataCollator, SiameseTrackerTrainingHostLoggingHook
 from .siamese_training_pair_sampling.builder import build_SiamFC_training_pair_sampler
+from .worker import SiameseTrackerTrainingDataWorker, SiameseTrackerTrainingDataCollator, SiameseTrackerTrainingMainProcessLoggingHook
 from .transform.builder import build_transform
 
 
-def build_siamese_tracker_train_data_pipeline(data_config: dict, build_context: BuildContext, config: dict) -> DataPipeline:
+def build_siamese_tracker_train_data_pipeline(data_config: dict, build_context: BuildContext, config: dict,
+                                              dtype: torch.dtype) -> DataPipeline:
     datasets = build_data_source(data_config['source'])
 
     sampler, datasets_sampling_weight = build_per_sequence_sampler(datasets, data_config['sampler'], build_context)
@@ -35,14 +39,20 @@ def build_siamese_tracker_train_data_pipeline(data_config: dict, build_context: 
     _print_data_source_stat(datasets, local_batch_size, get_world_size(), num_samples_per_epoch,
                             datasets_sampling_weight)
 
+
+    print('Siamese training pair sampling:\n' + pretty_format(data_config['siamese_training_pair_sampling'], indent_level=1))
     siamese_training_pair_sampler = build_SiamFC_training_pair_sampler(datasets, datasets_sampling_weight, sampler,
                                                                        data_config['siamese_training_pair_sampling'])
 
-    transform, transform_batch_collator, transform_host_data_pipelines = build_transform(data_config, config,
-                                                                                         build_context)
+    transform, transform_batch_collator, transform_data_pipelines_on_main_process = build_transform(data_config, config,
+                                                                                                    build_context, dtype)
 
     num_io_threads = data_config['num_io_threads']
     num_workers = data_config['num_workers']
+
+    if int(torch.__version__.split('.')[0]) < 2:
+        print('background io threads is only supported in PyTorch 2.0 or above.')
+        num_io_threads = 0
 
     worker = SiameseTrackerTrainingDataWorker(datasets, num_samples_per_epoch, local_batch_size,
                                               siamese_training_pair_sampler,
@@ -55,12 +65,12 @@ def build_siamese_tracker_train_data_pipeline(data_config: dict, build_context: 
 
     build_context.variables['num_iterations_per_epoch'] = num_iterations_per_epoch
 
-    logging_hook = SiameseTrackerTrainingHostLoggingHook(num_io_threads)
+    logging_hook = SiameseTrackerTrainingMainProcessLoggingHook(len(dataloader), local_batch_size * get_world_size(), num_io_threads)
     build_context.services.event.register_on_epoch_begin_event_listener(lambda epoch, is_train: logging_hook.on_epoch_begin())
 
     _print_data_loader_stat(num_iterations_per_epoch, num_workers, num_io_threads)
 
-    return DataPipeline(dataloader, (logging_hook, *transform_host_data_pipelines))
+    return DataPipeline(dataloader, (logging_hook, *transform_data_pipelines_on_main_process))
 
 
 def _print_data_source_stat(datasets, local_batch_size, num_ranks, num_samples_per_epoch,

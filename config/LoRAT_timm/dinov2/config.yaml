@@ -1,0 +1,36 @@
+name: "DINOv2/B-224"
+
+logging:
+  category: "LoRAT"
+  tags:
+    - "DINOv2"
+    - "base"
+    - "224"
+    - "LoRA"
+
+type: "LoRAT-timm"
+
+common:
+  template_size: [ 112, 112 ]
+  search_region_size: [ 224, 224 ]
+  template_feat_size: [ 8, 8 ]
+  search_region_feat_size: &search_region_feat_size [ 16, 16 ]
+  response_map_size: *search_region_feat_size
+  interpolation_mode: "bilinear"
+  interpolation_align_corners: false
+  normalization: "imagenet"
+
+model:
+  type: "vit"
+  backbone:
+    type: "timm"
+    parameters:
+      model_name: "vit_base_patch14_dinov2.lvd142m"
+  lora:
+    enabled: true
+    r: 64
+    alpha: 64
+    dropout: 0.
+    use_rslora: false
+
+run: !include "../run.yaml"

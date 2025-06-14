@@ -1,0 +1,7 @@
+!concat
+- !include "_378.yaml"
+- !include "_huge.yaml"
+- - path: "name"
+    value: "CLIP/H-378"
+  - path: "model.backbone.parameters.model_name"
+    value: "vit_huge_patch14_clip_quickgelu_378"

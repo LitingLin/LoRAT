@@ -181,7 +181,7 @@ class ServerLauncher:
                     socket.connect(self.socket_address)
                     socket.send_pyobj((self.key, 'hello'))
                     recv = socket.recv_pyobj()
-            if recv[0] != 200:
+            if not isinstance(recv, tuple) or recv[0] != 200:
                 self.process.kill()
                 raise Exception('Unexpected value')
         self.stopped = False
@@ -231,6 +231,8 @@ class Client:
         self._initialize()
         self.socket.send_pyobj((self.key, args))
         response = self.socket.recv_pyobj()
+        if not isinstance(response, tuple):
+            raise RuntimeError('unexpected response')
         if response[0] < 200 or response[0] >= 300:
             raise RuntimeError(f'remote procedure failed with code {response[0]}')
         else:

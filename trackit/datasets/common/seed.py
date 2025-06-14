@@ -6,11 +6,13 @@ class BaseSeed:
     name: str
     root_path: str
     data_split: Tuple[str, ...]
+    extra_flags: Tuple[str, ...]
     version: int
 
     def __init__(self, name: str, root_path: str,
                  data_split: Optional[Union[str, Sequence[str]]] = None,
                  supported_data_splits: Optional[Tuple[str, ...]] = None,
+                 extra_flags: Optional[Union[str, Sequence[str]]] = None,
                  version: int = 0):
         assert root_path is not None and len(root_path) > 0, 'root_path must be a valid path for dataset {}'.format(name)
         self.name = name
@@ -30,6 +32,15 @@ class BaseSeed:
                 assert ds in supported_data_splits, 'data_split {} is not supported for dataset {}'.format(ds, name)
         self._data_split = data_split
         self._supported_data_splits = supported_data_splits
+        if extra_flags is None:
+            extra_flags = ()
+        elif isinstance(extra_flags, str):
+            extra_flags = (extra_flags,)
+        elif isinstance(extra_flags, Sequence):
+            extra_flags = tuple(extra_flags)
+        else:
+            raise ValueError('extra_flags must be a string or a sequence of strings')
+        self.extra_flags = extra_flags
         self.version = version
 
     @property

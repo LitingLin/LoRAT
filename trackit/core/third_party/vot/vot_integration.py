@@ -57,7 +57,7 @@ class VOT(object):
         self._trax = trax.Server([region_format], [trax.Image.PATH], channels, metadata=dict(vot="python"), multiobject=multiobject)
 
         request = self._trax.wait()
-        assert(request.type == 'initialize')
+        assert(request.type == 'initialize'), request.type
 
         self._objects = []
 

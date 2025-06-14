@@ -5,7 +5,7 @@ from trackit.data.source import TrackingDataset
 from trackit.core.runtime.build_context import BuildContext
 from .distributed_evaluation_task_scheduler import DistributedTrackerEvaluationTaskDynamicSchedulerServer, DistributedTrackerEvaluationTaskDynamicSchedulerClient, SequenceOrder, DistributedTrackerEvaluationTaskDynamicScheduler
 from trackit.data.utils.data_source_matcher.builder import build_data_source_matcher
-from trackit.miscellanies.torch.distributed import is_main_process, get_world_size
+from trackit.miscellanies.torch.distributed import is_rank_0_process, get_world_size
 from trackit.data.context.variable.eval import DatasetEvaluationTask
 
 
@@ -86,18 +86,23 @@ def build_distributed_tracker_evaluation_task_dynamic_scheduler(datasets: Sequen
     max_batch_size = adjust_max_batch_size(scheduler.get_number_of_tasks(), max_batch_size, world_size, number_of_workers)
     build_context.variables['batch_size'] = max_batch_size
 
-    if is_main_process():
+    if is_rank_0_process():
         dynamic_scheduling_server = DistributedTrackerEvaluationTaskDynamicSchedulerServer(
             sampling_orchestrator_server_address, key, scheduler, max_batch_size, initialize=not persistent)
         if persistent:
-            build_context.services.event.register_on_start_event_listener(lambda: dynamic_scheduling_server.launch(), priority=0)
-            build_context.services.event.register_on_stop_event_listener(lambda: dynamic_scheduling_server.stop(wait_for_stop=True), priority=99)
+            build_context.services.event.register_on_start_event_listener(
+                lambda: dynamic_scheduling_server.launch(), priority=0)
+            build_context.services.event.register_on_stop_event_listener(
+                lambda: dynamic_scheduling_server.stop(wait_for_stop=True), priority=99)
             reset_signal_client = DistributedTrackerEvaluationTaskDynamicSchedulerClient(sampling_orchestrator_server_address, key)
-            build_context.services.event.register_on_epoch_begin_event_listener(lambda epoch, is_train: reset_signal_client.reset(), priority=0)
+            build_context.services.event.register_on_epoch_begin_event_listener(
+                lambda epoch, is_train: reset_signal_client.reset(), priority=0)
             build_context.services.event.register_on_stop_event_listener(lambda: reset_signal_client.close(), priority=0)
         else:
-            build_context.services.event.register_on_epoch_begin_event_listener(lambda epoch, is_train: dynamic_scheduling_server.launch(), priority=0)
-            build_context.services.event.register_on_epoch_end_event_listener(lambda epoch, is_train: dynamic_scheduling_server.stop(wait_for_stop=True), priority=99)
+            build_context.services.event.register_on_epoch_begin_event_listener(
+                lambda epoch, is_train: dynamic_scheduling_server.launch(), priority=0)
+            build_context.services.event.register_on_epoch_end_event_listener(
+                lambda epoch, is_train: dynamic_scheduling_server.stop(wait_for_stop=True), priority=99)
 
     dynamic_scheduling_client = DistributedTrackerEvaluationTaskDynamicSchedulerClient(sampling_orchestrator_server_address, key)
 

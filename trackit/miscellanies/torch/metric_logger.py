@@ -8,8 +8,10 @@ import datetime
 from collections import deque
 from typing import Optional
 from trackit.miscellanies.ema import EMA
-from trackit.miscellanies.machine.mem_info import get_mem_rss
-from trackit.miscellanies.machine.utils import sizeof_fmt
+from trackit.miscellanies.system.machine.mem_info import get_mem_rss
+from trackit.miscellanies.system.machine.utils import sizeof_fmt
+from trackit.miscellanies.system.monitoring.hwmon import SystemHardwareMonitoring
+from trackit.miscellanies.system.monitoring.resmon import get_cpu_percent
 
 
 class ProgressTrackerInterface:
@@ -45,12 +47,12 @@ class DefaultProgressTracker(ProgressTrackerInterface):
         self._index = -1
         if self._total is not None:
             self._rate_ema = EMA()
-            self._rate = None
+            self._time_ema = None
 
     def update(self, elapsed_time: float):
         self._index += 1
         if self._total is not None:
-            self._rate = self._rate_ema(elapsed_time)
+            self._time_ema = self._rate_ema(elapsed_time)
 
     def is_last(self):
         if self._total is None:
@@ -66,9 +68,9 @@ class DefaultProgressTracker(ProgressTrackerInterface):
     def eta(self):
         if self._total is None:
             raise RuntimeError("eta() is not available when total is not specified")
-        if self._rate is None:
+        if self._time_ema is None:
             return None
-        return self._rate * (self._total - self._index - 1)
+        return self._time_ema * (self._total - self._index - 1)
 
     def rate(self):  # we have no way to know the batch size by default
         return None
@@ -142,7 +144,13 @@ class LocalMetricLogger(object):
         self.delimiter = delimiter
         self.print_freq = print_freq
         self.progress_indicator: Optional[ProgressTrackerInterface] = None
-        self.extra_monitoring_items = {}
+        self.enable_monitoring_cpu_percent = False
+        self.enable_monitoring_system_total_resident_set_size = False
+        self.enable_monitoring_cuda_device_memory_allocated = False
+        self.enable_monitoring_mps_device_memory_allocated = False
+        self.enable_monitoring_cpu_package_temperature = False
+        self.enable_monitoring_memory_module_temperature = False
+        self.enable_monitoring_cuda_device_temperature = False
 
     def reset(self):
         for meter in self.meters.values():
@@ -152,7 +160,7 @@ class LocalMetricLogger(object):
 
     def update(self, **kwargs):
         for k, v in kwargs.items():
-            assert isinstance(v, (float, int))
+            assert isinstance(v, (int, float)), "value should be int or float, got type " + str(type(v)) + " for " + str(k)
             self.meters[k].update(v)
 
     def __str__(self):
@@ -176,21 +184,6 @@ class LocalMetricLogger(object):
 
     def set_custom_progress_tracker(self, progress_indicator: Optional[ProgressTrackerInterface]):
         self.progress_indicator = progress_indicator
-
-    def enable_monitoring_system_total_resident_set_size(self, name='mem'):
-        self.extra_monitoring_items[name] = lambda: sizeof_fmt(get_mem_rss())
-
-    def enable_monitoring_cuda_device_max_memory_allocated(self, name='dev_mem_max', device: Optional[torch.device] = None):
-        import torch.cuda
-        self.extra_monitoring_items[name] = lambda: sizeof_fmt(torch.cuda.max_memory_allocated(device))
-
-    def enable_monitoring_cuda_device_memory_allocated(self, name='dev_mem', device: Optional[torch.device] = None):
-        import torch.cuda
-        self.extra_monitoring_items[name] = lambda: sizeof_fmt(torch.cuda.max_memory_allocated(device))
-
-    def enable_monitoring_cpu_percent(self, name='cpu'):
-        import psutil
-        self.extra_monitoring_items[name] = lambda: f"{psutil.cpu_percent():.2f}%"
 
     def log_every(self, iterable, header=None):
         if self.progress_indicator is not None:
@@ -254,9 +247,35 @@ class LocalMetricLogger(object):
                     'data': str(data_time),
                 })
 
-                for name, item in self.extra_monitoring_items.items():
-                    msg_items.append(f'{name}: {{{name}}}')
-                    log_values[name] = item()
+                if self.enable_monitoring_cpu_percent:
+                    msg_items.append('cpu: {cpu}')
+                    log_values['cpu'] = f"{get_cpu_percent():.2f}%"
+                if self.enable_monitoring_system_total_resident_set_size:
+                    msg_items.append('mem: {mem}')
+                    log_values['mem'] = sizeof_fmt(get_mem_rss())
+                if self.enable_monitoring_cuda_device_memory_allocated:
+                    msg_items.append('cuda_mem: {cuda_mem}')
+                    log_values['cuda_mem'] = sizeof_fmt(torch.cuda.max_memory_allocated())
+                    torch.cuda.reset_peak_memory_stats()
+                if self.enable_monitoring_mps_device_memory_allocated:
+                    msg_items.append('mps_mem: {mps_mem}')
+                    log_values['mps_mem'] = sizeof_fmt(torch.mps.driver_allocated_memory())
+                if self.enable_monitoring_cpu_package_temperature or self.enable_monitoring_memory_module_temperature:
+                    hwmon = SystemHardwareMonitoring()
+                    hwmon.update()
+                    if self.enable_monitoring_cpu_package_temperature:
+                        cpu_package_temperature = hwmon.get_cpu_package_temperature()
+                        if cpu_package_temperature is not None:
+                            msg_items.append('cpu_temp: {cpu_temp}')
+                            log_values['cpu_temp'] = f"{cpu_package_temperature:.1f}°C"
+                    if self.enable_monitoring_memory_module_temperature:
+                        mem_temp = hwmon.get_memory_temperature()
+                        if mem_temp is not None:
+                            msg_items.append('mem_temp: {mem_temp}')
+                            log_values['mem_temp'] = f"{mem_temp:.1f}°C"
+                if self.enable_monitoring_cuda_device_temperature:
+                    msg_items.append('gpu_temp: {gpu_temp}')
+                    log_values['gpu_temp'] = f"{torch.cuda.temperature()}°C"
 
                 samples_per_second = progress_tracker.rate()
                 if samples_per_second is not None:

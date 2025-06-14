@@ -1,12 +1,13 @@
 from typing import NamedTuple, Sequence, Optional, Mapping
 import numpy as np
+from PIL import Image
 from . import SequenceInfo
 
 
 class TrackerEvalData_FrameData(NamedTuple):
     frame_index: int
     gt_bbox: Optional[np.ndarray]
-    gt_mask: Optional[np.ndarray]
+    gt_mask: Optional[Image.Image]
     input_data: dict
 
 

@@ -1,0 +1,52 @@
+- path: "run.runner.train"
+  value:
+    type: "deepspeed_train"
+    deepspeed:
+      gradient_accumulation_steps: 1
+      optimizer:
+        type: "Adam"
+        params:
+          lr: 1.e-4
+          weight_decay: 0.1
+          adam_w_mode: true
+      scheduler:
+        type: "WarmupCosineLR"
+        params:
+          warmup_num_epochs: 2
+          warmup_min_ratio: 1.e-3
+          warmup_type: "linear"
+          cos_min_ratio: 1.e-6
+      fp16:
+        enabled: true
+        auto_cast: false
+        loss_scale: 0
+        initial_scale_power: 16
+        loss_scale_window: 1000
+        hysteresis: 2
+        consecutive_hysteresis: false
+        min_loss_scale: 1
+      bf16:
+        enabled: false
+      zero_optimization:
+        stage: 1
+        overlap_comm: true
+      gradient_clipping: 1.
+
+    criteria:
+      type: "box_with_score_map"
+      classification:
+        type: "binary_cross_entropy"
+        iou_aware_classification_score: true
+        weight: 1.
+      bbox_regression:
+        type: "GIoU"
+        weight: 1.
+    save_torch_state_dict: true
+    enable_torch_compile: true
+
+- path:
+    - "run.data.train"
+    - "run.data.val"
+  action: "merge"
+  value:
+    dtype: "float16"

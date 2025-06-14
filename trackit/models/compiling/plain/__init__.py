@@ -3,12 +3,12 @@ import torch
 import torch.nn as nn
 import torch.amp
 from trackit.models.schema.input.auto_unpack import auto_unpack_and_call
-from trackit.models import ModelManager, ModelImplSuggestions
+from trackit.models import ModelManager
 from trackit.miscellanies.torch.amp_autocast import get_torch_amp_autocast_fn
 from trackit.miscellanies.torch.data_parallel import should_use_data_parallel
 from .torch_compile_option import TorchCompileOption
 from .auto_mixed_precision_option import AutoMixedPrecisionOption
-from .. import InferenceEngine
+from .. import InferenceEngine, OptimizedModel
 
 
 class PlainWrapper(nn.Module):
@@ -30,21 +30,29 @@ class PlainInferenceEngine(InferenceEngine):
         self._torch_compile_option = torch_compile_option
         self._auto_mixed_precision_option = auto_mixed_precision_option
 
-    def __call__(self, model_manager: ModelManager, device: torch.device, _):
-        model = model_manager.create(device, ModelImplSuggestions(optimize_for_inference=True)).model
+    def __call__(self, model_manager: ModelManager, device: torch.device, dtype: torch.dtype,
+                 max_batch_size: int, max_num_input_data_streams: int):
+        model = model_manager.create(device, dtype=dtype, optimize_for_inference=True).model
         model.eval()
-        optimized_model = model
+        return OptimizedModel(self._apply(model, device), model, device, dtype,
+                              self._auto_mixed_precision_option.dtype if self._auto_mixed_precision_option.enabled else None)
+
+    def _apply(self, model: torch.nn.Module, device: torch.device):
         if self._torch_compile_option.enabled:
-            if self._torch_compile_option.options is None:
-                optimized_model = torch.compile(optimized_model)
+            if self._torch_compile_option.parameters is None:
+                model = torch.compile(model)
                 print('torch.compile is enabled.')
             else:
-                optimized_model = torch.compile(optimized_model, **self._torch_compile_option.options)
-                print(f'torch.compile is enabled with options {self._torch_compile_option.options}.')
+                if self._torch_compile_option.parameters.get('backend', None) == 'tensorrt':
+                    import torch_tensorrt
+                model = torch.compile(model, **self._torch_compile_option.parameters)
+                print(f'torch.compile is enabled with options {self._torch_compile_option.parameters}.')
 
         if self._enable_data_parallel and should_use_data_parallel(device):
-            optimized_model = torch.nn.DataParallel(optimized_model, output_device=device)
+            model = torch.nn.DataParallel(model, output_device=device)
             print('DataParallel is enabled.')
 
-        amp_autocast_fn = get_torch_amp_autocast_fn(device.type, self._auto_mixed_precision_option.enabled, self._auto_mixed_precision_option.dtype)
-        return PlainWrapper(optimized_model, amp_autocast_fn), model
+        amp_autocast_fn = get_torch_amp_autocast_fn(device.type,
+                                                    self._auto_mixed_precision_option.enabled,
+                                                    self._auto_mixed_precision_option.dtype)
+        return PlainWrapper(model, amp_autocast_fn)

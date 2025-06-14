@@ -117,12 +117,13 @@ def _get_search_frame_candidates(z_index: int, length: int, frame_range: Optiona
     return x_candidate_indices, frame_range_extendable
 
 
-def _do_siamfc_pair_sampling(length: int, frame_range: Optional[int], mask: np.ndarray = None,
+def _do_siamfc_pair_sampling(length: int, frame_range: Optional[int], mask: Optional[np.ndarray] = None,
+                             z_mask: Optional[np.ndarray] = None,
                              sampling_method: SiamesePairSamplingMethod = SiamesePairSamplingMethod.causal,
                              rng_engine: np.random.Generator = np.random.default_rng(),
                              frame_range_auto_extend_step: int = 5,
                              frame_range_auto_extend_max_retry_count: int = 10,
-                             disable_frame_range_if_not_found: bool = False):
+                             ignore_frame_range_if_no_candidates_found: bool = False):
     '''
     :param length: length of the sequence
     :param frame_range:
@@ -141,7 +142,9 @@ def _do_siamfc_pair_sampling(length: int, frame_range: Optional[int], mask: np.n
             int: z_index, when no match search frame is found
     '''
     assert frame_range > 0 or frame_range is None
-    z_index = _get_random_index(length, mask, rng_engine)
+    if z_mask is None:
+        z_mask = mask
+    z_index = _get_random_index(length, z_mask, rng_engine)
 
     if length == 1:
         return z_index,
@@ -160,7 +163,7 @@ def _do_siamfc_pair_sampling(length: int, frame_range: Optional[int], mask: np.n
             break
         frame_range += frame_range_auto_extend_step
 
-    if disable_frame_range_if_not_found and frame_range is not None:
+    if ignore_frame_range_if_no_candidates_found and frame_range is not None:
         x_candidate_indices, _ = _get_search_frame_candidates(z_index, length, None, mask, sampling_method)
         if x_candidate_indices is not None:
             x_index = rng_engine.choice(x_candidate_indices)
@@ -188,29 +191,3 @@ def _do_negative_siamfc_pair_sampling(length: int, frame_range: int=None, mask: 
         return z_index,
     x_index = rng_engine.choice(indices)
     return z_index, x_index
-
-
-def get_random_positive_siamese_training_pair_from_track(
-        track: TrackingDataset_Track,
-        frame_range: Optional[int], sampling_method: SiamesePairSamplingMethod,
-        rng_engine: np.random.Generator,
-        frame_range_auto_extend_step: int = 5,
-        frame_range_auto_extend_max_retry_count: int = 10,
-        disable_frame_range_if_not_found: bool = False
-):
-    return _do_siamfc_pair_sampling(len(track), frame_range, track.get_all_object_existence_flag(), sampling_method,
-                                    rng_engine, frame_range_auto_extend_step, frame_range_auto_extend_max_retry_count,
-                                    disable_frame_range_if_not_found)
-
-
-def get_random_negative_siamese_training_pair_from_track(
-        track: TrackingDataset_Track,
-        frame_range: Optional[int], rng_engine: np.random.Generator):
-    track_length = len(track)
-    assert track_length > 0
-    if track_length == 1:
-        frame_indices = (0,)
-        assert track[0].get_existence_flag() is None or track[0].get_existence_flag()  # z must exist
-    else:
-        frame_indices = _do_negative_siamfc_pair_sampling(len(track), frame_range, track.get_all_object_existence_flag(), rng_engine)
-    return frame_indices

@@ -107,6 +107,9 @@ class MemoryMappedDataset:
     def get_data_split(self) -> Tuple[str, ...]:
         return self.dataset_attributes['split']
 
+    def get_extra_flags(self) -> Tuple[str, ...]:
+        return self.dataset_attributes['extra_flags']
+
     def get_version(self) -> int:
         return self.dataset_attributes['version'][1]
 
@@ -146,7 +149,7 @@ class MemoryMappedDataset:
         return self.context.get_bounding_box_data_type()
 
     def get_full_name(self):
-        return generate_dataset_unique_id(self.get_name(), self.get_data_split(), self.get_applied_filter_list(), False)
+        return generate_dataset_unique_id(self.get_name(), self.get_data_split(), self.get_extra_flags(), self.get_applied_filter_list(), False)
 
     def get_unique_id(self):
-        return generate_dataset_unique_id(self.get_name(), self.get_data_split(), self.get_applied_filter_list(), True)
+        return generate_dataset_unique_id(self.get_name(), self.get_data_split(), self.get_extra_flags(), self.get_applied_filter_list(), True)

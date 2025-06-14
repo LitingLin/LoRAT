@@ -1,0 +1,22 @@
+- path: "logging.tags"
+  action: "remove_by_value"
+  value: "256"
+- path: "logging.tags"
+  action: "append"
+  value: "336"
+- path: "common.template_feat_size"
+  value: [ 12, 12 ]
+- path: "common.template_size"
+  value: [ 168, 168 ]
+- path:
+  - "common.response_map_size"
+  - "common.search_region_feat_size"
+  value: [ 24, 24 ]
+- path: "common.search_region_size"
+  value: [ 336, 336 ]
+- path:
+  - "run.data.train.transform.SiamFC_cropping.search_region.area_factor"
+  - "run.data.val.transform.SiamFC_cropping.search_region.area_factor"
+  value: 5.
+- path: "run.runner.test.evaluator.pipeline.search_region_cropping.area_factor"
+  value: 5.

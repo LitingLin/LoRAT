@@ -1,14 +1,17 @@
 from typing import Tuple
 import torch
 import torch.nn as nn
-from timm.models.layers import trunc_normal_
-from trackit.models.backbone.dinov2 import DinoVisionTransformer, interpolate_pos_encoding
+from timm.layers import trunc_normal_
+
+from trackit.models import ModelInputDataSelfDescriptionMixin
+from trackit.models.backbone.dinov2.model import DinoVisionTransformer, interpolate_pos_encoding
+from ...funcs.sample_data import generate_LoRAT_sample_data
 from ...modules.patch_embed import PatchEmbedNoSizeCheck
 from ...modules.head.mlp import MlpAnchorFreeHead
 from ...modules.dinov2_adapter import DINOv2AdapterBlock
 
 
-class LoRATBaseline_DINOv2(nn.Module):
+class LoRAT_DINOv2(nn.Module, ModelInputDataSelfDescriptionMixin):
     def __init__(self, vit: DinoVisionTransformer,
                  template_feat_size: Tuple[int, int],
                  search_region_feat_size: Tuple[int, int],
@@ -70,10 +73,18 @@ class LoRATBaseline_DINOv2(nn.Module):
         fusion_feat = self.norm(fusion_feat)
         return fusion_feat[:, z_feat.shape[1]:, :]
 
-    def state_dict(self, **kwargs):
-        state_dict = super().state_dict(**kwargs)
-        prefix = kwargs.get('prefix', '')
-        for key in list(state_dict.keys()):
-            if not self.get_parameter(key[len(prefix):]).requires_grad:
-                state_dict.pop(key)
-        return state_dict
+    def get_sample_data(self, batch_size: int,
+                        device: torch.device,
+                        dtype: torch.dtype, _):
+        return generate_LoRAT_sample_data(self.z_size, self.x_size, self.patch_embed.patch_size,
+                                          batch_size, device, dtype)
+
+
+    def freeze_for_peft(self):
+        for param in self.patch_embed.parameters():
+            param.requires_grad = False
+        for name, param in self.blocks.named_parameters():
+            if 'adapter' not in name:
+                param.requires_grad = False
+        self.norm.requires_grad = False
+        self.pos_embed.requires_grad = False

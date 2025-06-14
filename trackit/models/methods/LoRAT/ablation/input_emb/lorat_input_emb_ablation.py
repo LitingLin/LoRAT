@@ -1,21 +1,21 @@
-from typing import Tuple, List, Optional, Mapping, Any
+from itertools import chain
+from typing import Tuple
 import torch
 import torch.nn as nn
-from collections import OrderedDict
-from timm.models.layers import trunc_normal_
-from trackit.models.backbone.dinov2 import DinoVisionTransformer, interpolate_pos_encoding
+from timm.layers import trunc_normal_
+
+from trackit.models import ModelInputDataSelfDescriptionMixin
+from trackit.models.backbone.dinov2.model import DinoVisionTransformer, interpolate_pos_encoding
+from ...funcs.sample_data import generate_LoRAT_sample_data
 from ...modules.patch_embed import PatchEmbedNoSizeCheck
-from ...modules.lora.apply import find_all_frozen_nn_linear_names, apply_lora
 from ...modules.head.mlp import MlpAnchorFreeHead
 
 
-class LoRAT_DINOv2(nn.Module):
+class LoRAT_DINOv2(nn.Module, ModelInputDataSelfDescriptionMixin):
     def __init__(self, vit: DinoVisionTransformer,
                  template_feat_size: Tuple[int, int],
                  search_region_feat_size: Tuple[int, int],
-                 pos_embed_trainable: bool,
-                 enable_token_type_embed: bool, enable_template_foreground_indicating_embed: bool,
-                 lora_r: int, lora_alpha: float, lora_dropout: float, use_rslora: bool = False):
+                 enable_token_type_embed: bool, enable_template_foreground_indicating_embed: bool):
         super().__init__()
         assert template_feat_size[0] <= search_region_feat_size[0] and template_feat_size[1] <= search_region_feat_size[1]
         self.z_size = template_feat_size
@@ -26,20 +26,11 @@ class LoRAT_DINOv2(nn.Module):
         self.norm = vit.norm
         self.embed_dim = vit.embed_dim
 
-        for param in self.parameters():
-            param.requires_grad = False
-
         self.pos_embed = nn.Parameter(torch.empty(1, self.x_size[0] * self.x_size[1], self.embed_dim))
         self.pos_embed.data.copy_(interpolate_pos_encoding(vit.pos_embed.data[:, 1:, :],
                                                            self.x_size,
                                                            vit.patch_embed.patches_resolution,
                                                            num_prefix_tokens=0, interpolate_offset=0))
-
-        if not pos_embed_trainable:
-            self.pos_embed.requires_grad = False
-
-        self.lora_alpha = lora_alpha
-        self.use_rslora = use_rslora
 
         if enable_token_type_embed:
             if enable_template_foreground_indicating_embed:
@@ -51,10 +42,6 @@ class LoRAT_DINOv2(nn.Module):
 
         self.enable_token_type_embed = enable_token_type_embed
         self.enable_template_foreground_indicating_embed = enable_template_foreground_indicating_embed
-
-        for i_layer, block in enumerate(self.blocks):
-            linear_names = find_all_frozen_nn_linear_names(block)
-            apply_lora(block, linear_names, lora_r, lora_alpha, lora_dropout, use_rslora)
 
         self.head = MlpAnchorFreeHead(self.embed_dim, self.x_size)
 
@@ -92,22 +79,17 @@ class LoRAT_DINOv2(nn.Module):
         fusion_feat = self.norm(fusion_feat)
         return fusion_feat[:, z_feat.shape[1]:, :]
 
-    def state_dict(self, **kwargs):
-        state_dict = super().state_dict(**kwargs)
-        prefix = kwargs.get('prefix', '')
-        for key in list(state_dict.keys()):
-            if not self.get_parameter(key[len(prefix):]).requires_grad:
-                state_dict.pop(key)
-        if self.lora_alpha != 1.:
-            state_dict[prefix + 'lora_alpha'] = torch.as_tensor(self.lora_alpha)
-            state_dict[prefix + 'use_rslora'] = torch.as_tensor(self.use_rslora)
-        return state_dict
+    def freeze_for_peft(self, pos_embed_trainable: bool):
+        to_freeze = [self.patch_embed.parameters(),
+            self.blocks.parameters(),
+            (self.norm,)]
+        if not pos_embed_trainable:
+            to_freeze.append((self.pos_embed,))
+        for p in chain(to_freeze):
+            p.requires_grad = False
 
-    def load_state_dict(self, state_dict: Mapping[str, Any], **kwargs):
-        if 'lora_alpha' in state_dict:
-            state_dict = OrderedDict(**state_dict)
-            self.lora_alpha = state_dict['lora_alpha'].item()
-            self.use_rslora = state_dict['use_rslora'].item()
-            del state_dict['lora_alpha']
-            del state_dict['use_rslora']
-        return super().load_state_dict(state_dict, **kwargs)
+    def get_sample_data(self, batch_size: int,
+                        device: torch.device,
+                        dtype: torch.dtype, _):
+        return generate_LoRAT_sample_data(self.z_size, self.x_size, self.patch_embed.patch_size,
+                                          batch_size, device, dtype)

@@ -1,15 +1,18 @@
-from typing import Tuple, Mapping, Any
+from typing import Tuple
 import torch
 import torch.nn as nn
-from timm.models.layers import trunc_normal_
-from trackit.models.backbone.dinov2 import DinoVisionTransformer, interpolate_pos_encoding
+from timm.layers import trunc_normal_
+
+from trackit.models import ModelInputDataSelfDescriptionMixin
+from trackit.models.backbone.dinov2.model import DinoVisionTransformer, interpolate_pos_encoding
+from ...funcs.sample_data import generate_LoRAT_sample_data
+from ...funcs.vit_lora_utils import find_all_frozen_nn_linear_names
 from ...modules.patch_embed import PatchEmbedNoSizeCheck
 from ...modules.head.mlp import MlpAnchorFreeHead
-from ...modules.lora.apply import find_all_frozen_nn_linear_names
 from ...modules.ia3 import apply_ia3
 
 
-class LoRATBaseline_DINOv2(nn.Module):
+class LoRAT_DINOv2(nn.Module, ModelInputDataSelfDescriptionMixin):
     def __init__(self, vit: DinoVisionTransformer,
                  template_feat_size: Tuple[int, int],
                  search_region_feat_size: Tuple[int, int]):
@@ -68,10 +71,8 @@ class LoRATBaseline_DINOv2(nn.Module):
         fusion_feat = self.norm(fusion_feat)
         return fusion_feat[:, z_feat.shape[1]:, :]
 
-    def state_dict(self, **kwargs):
-        state_dict = super().state_dict(**kwargs)
-        prefix = kwargs.get('prefix', '')
-        for key in list(state_dict.keys()):
-            if not self.get_parameter(key[len(prefix):]).requires_grad:
-                state_dict.pop(key)
-        return state_dict
+    def get_sample_data(self, batch_size: int,
+                        device: torch.device,
+                        dtype: torch.dtype, _):
+        return generate_LoRAT_sample_data(self.z_size, self.x_size, self.patch_embed.patch_size,
+                                          batch_size, device, dtype)

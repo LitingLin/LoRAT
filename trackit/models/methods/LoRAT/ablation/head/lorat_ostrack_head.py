@@ -1,19 +1,19 @@
-from typing import Tuple, Mapping, Any
+from typing import Tuple
 import torch
 import torch.nn as nn
-from collections import OrderedDict
-from timm.models.layers import trunc_normal_
-from trackit.models.backbone.dinov2 import DinoVisionTransformer, interpolate_pos_encoding
+from timm.layers import trunc_normal_
+
+from trackit.models import ModelInputDataSelfDescriptionMixin
+from trackit.models.backbone.dinov2.model import DinoVisionTransformer, interpolate_pos_encoding
+from ...funcs.sample_data import generate_LoRAT_sample_data
 from ...modules.patch_embed import PatchEmbedNoSizeCheck
-from ...modules.lora.apply import find_all_frozen_nn_linear_names, apply_lora
 from ...modules.head.ostrack import OSTrackConvHead
 
 
-class LoRAT_DINOv2(nn.Module):
+class LoRAT_DINOv2(nn.Module, ModelInputDataSelfDescriptionMixin):
     def __init__(self, vit: DinoVisionTransformer, head_channels: int,
                  template_feat_size: Tuple[int, int],
-                 search_region_feat_size: Tuple[int, int],
-                 lora_r: int, lora_alpha: float, lora_dropout: float, use_rslora: bool = False):
+                 search_region_feat_size: Tuple[int, int]):
         super().__init__()
         assert template_feat_size[0] <= search_region_feat_size[0] and template_feat_size[1] <= search_region_feat_size[1]
         self.z_size = template_feat_size
@@ -30,18 +30,8 @@ class LoRAT_DINOv2(nn.Module):
                                                            vit.patch_embed.patches_resolution,
                                                            num_prefix_tokens=0, interpolate_offset=0))
 
-        self.lora_alpha = lora_alpha
-        self.use_rslora = use_rslora
-
-        for param in self.parameters():
-            param.requires_grad = False
-
         self.token_type_embed = nn.Parameter(torch.empty(3, self.embed_dim))
         trunc_normal_(self.token_type_embed, std=.02)
-
-        for i_layer, block in enumerate(self.blocks):
-            linear_names = find_all_frozen_nn_linear_names(block)
-            apply_lora(block, linear_names, lora_r, lora_alpha, lora_dropout, use_rslora)
 
         self.head = OSTrackConvHead(self.embed_dim, head_channels, self.x_size)
 
@@ -71,22 +61,8 @@ class LoRAT_DINOv2(nn.Module):
         fusion_feat = self.norm(fusion_feat)
         return fusion_feat[:, z_feat.shape[1]:, :]
 
-    def state_dict(self, **kwargs):
-        state_dict = super().state_dict(**kwargs)
-        prefix = kwargs.get('prefix', '')
-        for key in list(state_dict.keys()):
-            if not self.get_parameter(key[len(prefix):]).requires_grad:
-                state_dict.pop(key)
-        if self.lora_alpha != 1.:
-            state_dict[prefix + 'lora_alpha'] = torch.as_tensor(self.lora_alpha)
-            state_dict[prefix + 'use_rslora'] = torch.as_tensor(self.use_rslora)
-        return state_dict
-
-    def load_state_dict(self, state_dict: Mapping[str, Any], **kwargs):
-        if 'lora_alpha' in state_dict:
-            state_dict = OrderedDict(**state_dict)
-            self.lora_alpha = state_dict['lora_alpha'].item()
-            self.use_rslora = state_dict['use_rslora'].item()
-            del state_dict['lora_alpha']
-            del state_dict['use_rslora']
-        return super().load_state_dict(state_dict, **kwargs)
+    def get_sample_data(self, batch_size: int,
+                        device: torch.device,
+                        dtype: torch.dtype, _):
+        return generate_LoRAT_sample_data(self.z_size, self.x_size, self.patch_embed.patch_size,
+                                          batch_size, device, dtype)

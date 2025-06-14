@@ -19,7 +19,9 @@ class PyTrackingAnalysisModuleTrackingResultWriter:
         self._duplication_check = set()
 
     def write(self, tracker_name: str, repeat_index: Optional[int], sequence_name: str, predicted_bboxes: np.ndarray):
-        assert (tracker_name, repeat_index, sequence_name) not in self._duplication_check
+        assert (tracker_name, repeat_index, sequence_name) not in self._duplication_check, \
+            (f"Duplicated tracking result ({tracker_name}, {repeat_index}, {sequence_name}). "
+             f"Please note that the Pytracking format does not support the same sequence name from different datasets.")
         self._duplication_check.add((tracker_name, repeat_index, sequence_name))
         tracker_folder_path = tracker_name
         if repeat_index is not None:
@@ -33,7 +35,7 @@ class PyTrackingAnalysisModuleTrackingResultWriter:
 
 
 class PyTrackingEvaluationToolAdaptor(EvaluationResultHandler):
-    def __init__(self, tracker_name: str, output_folder: str, file_name: str, rasterize_bbox: bool = True):
+    def __init__(self, tracker_name: str, output_folder: str, file_name: str, rasterize_bbox: bool):
         self._writer = PyTrackingAnalysisModuleTrackingResultWriter(output_folder, file_name)
         self._tracker_name = tracker_name
         self._result_adjuster = ExternalToolkitCompatibilityHelper()

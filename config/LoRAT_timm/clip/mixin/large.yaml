@@ -1,0 +1,7 @@
+!concat
+- !include "_224.yaml"
+- !include "_large.yaml"
+- - path: "name"
+    value: "CLIP/L-224"
+  - path: "model.backbone.parameters.model_name"
+    value: "vit_large_patch14_clip_quickgelu_224"

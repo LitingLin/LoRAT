@@ -28,6 +28,11 @@ datasets:
     splits:
       - "test"
 
+  - name: "VastTrack"
+    type: "SOT"
+    splits:
+      - "test"
+
   - name: "UAV123"
     type: "SOT"
 

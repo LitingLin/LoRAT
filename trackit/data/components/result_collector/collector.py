@@ -3,12 +3,12 @@ import itertools
 from dataclasses import dataclass
 from tabulate import tabulate
 
-from trackit.miscellanies.torch.distributed import is_main_process
+from trackit.miscellanies.torch.distributed import is_rank_0_process
 from trackit.core.runtime.metric_logger import get_current_metric_logger, get_current_local_metric_logger
 from trackit.core.runtime.context.epoch import get_current_epoch_context
 from trackit.data.protocol.eval_output import SequenceEvaluationResult_SOT
 from trackit.data.utils.data_source_matcher import DataSourceMatcher
-from trackit.data import HostDataPipeline
+from trackit.data import MainProcessDataPipeline
 from trackit.data.context.variable.eval import DatasetEvaluationTask
 
 from .progress_tracer.predefined import EvaluationTaskTracer_Predefined
@@ -90,12 +90,14 @@ class SubHandlerBuildOptions:
     bbox_rasterize: bool
 
 
-class EvaluationResultCollector_RuntimeIntegration(HostDataPipeline):
-    def __init__(self, tracker_name: str, handler_build_options: Mapping[DataSourceMatcher, Sequence[SubHandlerBuildOptions]],
-                 optional_predefined_evaluation_tasks: Optional[Sequence[DatasetEvaluationTask]], run_async: bool, log_summary: bool):
+class EvaluationResultCollector_RuntimeIntegration(MainProcessDataPipeline):
+    def __init__(self, tracker_name: str,
+                 handler_build_options: Mapping[DataSourceMatcher, Sequence[SubHandlerBuildOptions]],
+                 optional_predefined_evaluation_tasks: Optional[Sequence[DatasetEvaluationTask]],
+                 run_async: bool, log_summary: bool):
         tracker_name = tracker_name.replace('/', '-')
         tracker_name = tracker_name.replace('\\', '-')
-        if is_main_process():
+        if is_rank_0_process():
             self._predefined_evaluation_tasks = optional_predefined_evaluation_tasks
             self._tracker_name = tracker_name
             self._handler_build_options = handler_build_options
@@ -103,7 +105,7 @@ class EvaluationResultCollector_RuntimeIntegration(HostDataPipeline):
             self._log_summary = log_summary
 
     def on_epoch_begin(self):
-        if is_main_process():
+        if is_rank_0_process():
             output_path = get_current_epoch_context().get_current_epoch_output_path()
             if self._predefined_evaluation_tasks is not None:
                 progress_tracer = EvaluationTaskTracer_Predefined(self._predefined_evaluation_tasks)
@@ -159,7 +161,7 @@ class EvaluationResultCollector_RuntimeIntegration(HostDataPipeline):
     def post_process(self, output_data: Optional[dict]):
         if output_data is not None:
             self._local_cache.extend(output_data['evaluated_sequences'])
-        if is_main_process():
+        if is_rank_0_process():
             print_metrics(self._collector.get_metrics(), self._log_summary)
         return output_data
 
@@ -169,7 +171,7 @@ class EvaluationResultCollector_RuntimeIntegration(HostDataPipeline):
         return cached_sequences
 
     def distributed_on_gathered(self, evaluation_results_on_all_nodes: Sequence[Sequence[SequenceEvaluationResult_SOT]]) -> None:
-        if is_main_process():
+        if is_rank_0_process():
             evaluation_results = tuple(itertools.chain.from_iterable(evaluation_results_on_all_nodes))
             if len(evaluation_results) > 0:
                 for evaluation_result in evaluation_results:
@@ -180,7 +182,7 @@ class EvaluationResultCollector_RuntimeIntegration(HostDataPipeline):
 
     def on_epoch_end(self):
         assert len(self._local_cache) == 0
-        if is_main_process():
+        if is_rank_0_process():
             self._collector.finalize()
             print_metrics(self._collector.get_metrics(), self._log_summary)
             del self._collector

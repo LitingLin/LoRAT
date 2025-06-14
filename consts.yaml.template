@@ -4,9 +4,11 @@ num_val_workers: 6
 num_eval_workers: 4
 num_io_threads_per_worker: 1
 on_shared_file_system: false
+monitor_system_resources: true
+monitor_system_health_sensors: false
+use_safetensors: true
 
 # Dataset Paths
-
 LaSOT_PATH: ''
 LaSOT_Extension_PATH: ''
 
@@ -41,3 +43,11 @@ UCF101_THUMOS_2015_HUMAN_ANNOTATION: ''
 TempleColor_PATH: ''
 Youtube_VIS_PATH: ''
 ImageNet-21k_PATH: ''
+
+# Access Keys
+HF_TOKEN: ''
+WANDB_API_KEY: ''
+
+# Variables to adjust the behavior of external libraries
+## timm: prefer to use the old cached model weight on local disk
+TIMM_USE_OLD_CACHE: true

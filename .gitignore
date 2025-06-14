@@ -632,11 +632,12 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
+# macOS
+.DS_Store
 
-### Ours ###
-
-/.idea
+### My ###
 /logging
 /wandb
 /consts.yaml
 my-run.sh
+/.idea

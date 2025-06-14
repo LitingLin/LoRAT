@@ -189,7 +189,8 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
             enclosed_rb = torch.max(bboxes1[..., :, None, 2:],
                                     bboxes2[..., None, :, 2:])
 
-    eps = union.new_tensor([eps])
+    if isinstance(eps, float):
+        eps = union.new_tensor([eps])
     union = torch.max(union, eps)
     ious = overlap / union
     if mode in ['iou', 'iof']:
@@ -598,7 +599,7 @@ class IoULoss(nn.Module):
         super().__init__()
         assert mode in ['linear', 'square', 'log']
         self.mode = mode
-        self.eps = eps
+        self.register_buffer('eps', torch.tensor(eps))
 
     def forward(self,
                 pred: Tensor,
@@ -638,7 +639,7 @@ class BoundedIoULoss(nn.Module):
                  eps: float = 1e-3) -> None:
         super().__init__()
         self.beta = beta
-        self.eps = eps
+        self.register_buffer('eps', torch.tensor(eps))
 
     def forward(self,
                 pred: Tensor,
@@ -672,7 +673,7 @@ class GIoULoss(nn.Module):
     def __init__(self,
                  eps: float = 1e-6) -> None:
         super().__init__()
-        self.eps = eps
+        self.register_buffer('eps', torch.tensor(eps))
 
     def forward(self,
                 pred: Tensor,
@@ -707,7 +708,7 @@ class DIoULoss(nn.Module):
     def __init__(self,
                  eps: float = 1e-6) -> None:
         super().__init__()
-        self.eps = eps
+        self.register_buffer('eps', torch.tensor(eps))
 
     def forward(self,
                 pred: Tensor,
@@ -743,7 +744,7 @@ class CIoULoss(nn.Module):
     def __init__(self,
                  eps: float = 1e-6) -> None:
         super().__init__()
-        self.eps = eps
+        self.register_buffer('eps', torch.tensor(eps))
 
     def forward(self,
                 pred: Tensor,
@@ -781,7 +782,7 @@ class EIoULoss(nn.Module):
                  eps: float = 1e-6,
                  smooth_point: float = 0.1) -> None:
         super().__init__()
-        self.eps = eps
+        self.register_buffer('eps', torch.tensor(eps))
         self.smooth_point = smooth_point
 
     def forward(self,
@@ -823,7 +824,7 @@ class SIoULoss(nn.Module):
                  eps: float = 1e-6,
                  neg_gamma: bool = False) -> None:
         super().__init__()
-        self.eps = eps
+        self.register_buffer('eps', torch.tensor(eps))
         self.neg_gamma = neg_gamma
 
     def forward(self,

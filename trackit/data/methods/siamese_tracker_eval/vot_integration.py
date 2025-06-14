@@ -1,20 +1,22 @@
 import uuid
 import numpy as np
 import torch.utils.data
+
 import trax
 
 from trackit.core.third_party.vot.vot_integration import VOT, Rectangle
 from trackit.datasets.base.operator.bbox.transform.compile import (compile_bbox_transform, BoundingBoxFormat,
-                                                                        BoundingBoxCoordinateSystem)
+                                                                   BoundingBoxCoordinateSystem)
 from trackit.miscellanies.image.io import read_image_with_auto_retry
+from trackit.miscellanies.image.pil_interop import from_pil_image, to_pil_image
 from trackit.data.protocol.eval_input import TrackerEvalData, SequenceInfo
 from trackit.data.protocol.eval_output import FrameEvaluationResult_SOT
 from .transform import SiameseTrackerEval_DataTransform
 from . import SiameseTrackerEvalDataWorker_Task, SiameseTrackerEvalDataWorker_FrameContext
-from ... import HostDataPipeline
+from ... import MainProcessDataPipeline
 
 
-class SiameseTrackerEvaluation_VOTToolkitIntegrator(torch.utils.data.dataset.IterableDataset, HostDataPipeline):
+class SiameseTrackerEvaluation_VOTToolkitIntegrator(torch.utils.data.dataset.IterableDataset, MainProcessDataPipeline):
     def __init__(self, vot: VOT, vot_region_format: trax.Region,
                  transform: SiameseTrackerEval_DataTransform):
         self._vot = vot
@@ -56,11 +58,14 @@ class SiameseTrackerEvaluation_VOTToolkitIntegrator(torch.utils.data.dataset.Ite
             sequence_info = None
             init_context = None
             if template_image is not None:
-                template_region = self._vot.objects()[index_of_object]
+                vot_init_region = self._vot.objects()[index_of_object]
                 if self._vot_region_format == trax.Region.MASK:
-                    template_box = _rect_from_mask(template_region)
+                    template_box = _rect_from_mask(vot_init_region)
+                    template_mask = vot_init_region.astype(bool)
+                    template_mask = to_pil_image(template_mask)
                 elif self._vot_region_format == trax.Region.RECTANGLE:
-                    template_box = (template_region.x, template_region.y, template_region.width, template_region.height)
+                    template_box = (vot_init_region.x, vot_init_region.y, vot_init_region.width, vot_init_region.height)
+                    template_mask = None
                 else:
                     raise NotImplementedError()
                 template_box = np.array(self.vot_box_format_to_ours(template_box), dtype=np.float64)
@@ -68,13 +73,14 @@ class SiameseTrackerEvaluation_VOTToolkitIntegrator(torch.utils.data.dataset.Ite
                                              self._sequence_uuid + '-' + str(index_of_object), None, None)
                 init_context = SiameseTrackerEvalDataWorker_FrameContext(self._index - 1,  # 0
                                                                          lambda: template_image,
-                                                                         template_box)
+                                                                         template_box,
+                                                                         template_mask)
 
             if search_region_image is not None:
                 do_task_finalization = False
                 tracking_context = SiameseTrackerEvalDataWorker_FrameContext(self._index,
                                                                              lambda: search_region_image,
-                                                                             None)
+                                                                             None, None)
             else:
                 do_task_finalization = True
                 tracking_context = None
@@ -98,8 +104,10 @@ class SiameseTrackerEvaluation_VOTToolkitIntegrator(torch.utils.data.dataset.Ite
         for evaluated_frame in evaluated_frames:
             assert isinstance(evaluated_frame, FrameEvaluationResult_SOT)
             if evaluated_frame.output_mask is not None:
-                assert isinstance(evaluated_frame.output_mask, np.ndarray)
-                outputs.append(evaluated_frame.output_mask.astype(np.uint8))
+                output_mask = evaluated_frame.output_mask
+                output_mask = from_pil_image(output_mask)
+                output_mask = output_mask.astype(np.uint8)
+                outputs.append(output_mask)
             else:
                 assert isinstance(evaluated_frame.output_box, np.ndarray)
                 box = self.ours_box_format_to_vot(evaluated_frame.output_box.tolist())

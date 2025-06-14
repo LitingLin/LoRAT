@@ -16,6 +16,7 @@ def memory_mapped_constructor_common_preliminary_works(base_dataset: dict, base_
     constructor = ListMemoryMappedConstructor(path)
 
     dataset_attributes = {'name': base_dataset['name'], 'split': base_dataset['split'],
+                          'extra_flags': base_dataset['extra_flags'],
                           'version': [scheme_version, base_dataset['version'][1]],
                           'filters': base_dataset_filters, 'type': target_dataset_type_name}
 

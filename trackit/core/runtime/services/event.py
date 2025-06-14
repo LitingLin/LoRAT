@@ -14,13 +14,15 @@ def emit_stop_event(event_listener_registry_list: Iterable[EpochBasedTrainerEven
             listener()
 
 
-def emit_epoch_begin_event(event_listener_registry_list: Iterable[EpochBasedTrainerEventListenerRegistry], epoch: int, is_train: bool):
+def emit_epoch_begin_event(event_listener_registry_list: Iterable[EpochBasedTrainerEventListenerRegistry],
+                           epoch: int, is_train: bool):
     for event_listener_registry in event_listener_registry_list:
         for listener in event_listener_registry.list_on_epoch_begin_event_listener():
             listener(epoch, is_train)
 
 
-def emit_epoch_end_event(event_listener_registry_list: Iterable[EpochBasedTrainerEventListenerRegistry], epoch: int, is_train: bool):
+def emit_epoch_end_event(event_listener_registry_list: Iterable[EpochBasedTrainerEventListenerRegistry],
+                         epoch: int, is_train: bool):
     for event_listener_registry in event_listener_registry_list:
         for listener in event_listener_registry.list_on_epoch_end_event_listener():
             listener(epoch, is_train)

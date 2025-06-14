@@ -16,6 +16,7 @@ class BuildContext:
     pin_memory: bool
     master_node_ip_addr: str
     run_id: str
+    num_epochs: int
     global_synchronized_rng: np.random.Generator
     local_rng: np.random.Generator
     instance_specific_rng: np.random.Generator

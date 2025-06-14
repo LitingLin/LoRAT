@@ -28,11 +28,31 @@ def draw_box_on_image_(image: np.ndarray, box: np.ndarray, color: Union[np.ndarr
     box = box.clip(min=0)
     if np.issubdtype(box.dtype, np.floating):
         assert np.isfinite(box).all()
-        box = bbox_rasterize(box)
+        box = bbox_rasterize(box, end_exclusive=False)
     x1, y1, x2, y2 = box.tolist()
 
-    image[y1: y1 + thickness, x1: x2] = color  # Top line
-    image[y2: y2 + thickness, x1: x2] = color  # Bottom line
-    image[y1: y2, x1: x1 + thickness] = color  # Left line
-    image[y1: y2, x2: x2 + thickness] = color  # Right line
+    H, W, _ = image.shape
+    x1_c = max(0, x1)
+    y1_c = max(0, y1)
+    x2_c = min(W, x2)
+    y2_c = min(H, y2)
+    # Top line
+    # Starts at y1_c, ends at y1_c + thickness, but not exceeding y2_c
+    y_end = min(y1_c + thickness, y2_c)
+    image[y1_c: y_end, x1_c: x2_c] = color
+
+    # Bottom line
+    # Starts at y2_c - thickness (but not below y1_c), ends at y2_c
+    y_start = max(y1_c, y2_c - thickness)
+    image[y_start: y2_c, x1_c: x2_c] = color
+
+    # Left line
+    # Starts at x1_c, ends at x1_c + thickness, but not exceeding x2_c
+    x_end = min(x1_c + thickness, x2_c)
+    image[y1_c: y2_c, x1_c: x_end] = color
+
+    # Right line
+    # Starts at x2_c - thickness (but not below x1_c), ends at x2_c
+    x_start = max(x1_c, x2_c - thickness)
+    image[y1_c: y2_c, x_start: x2_c] = color
     return image

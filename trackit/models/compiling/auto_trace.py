@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
-from typing import Union, Dict, Any
+from typing import Dict, Any
 from trackit.models.schema.conversion.trace_friendly import TraceFriendlyDataAdaptor, get_trace_friendly_data_adaptor
-from trackit.models.schema.input.dummy_data_generation import SampleInputDataGeneratorInterface, SampleInputDataGeneratorInterface_MultiPath
 from trackit.models.schema.input.auto_unpack import auto_unpack_and_call
+from trackit.models import ModelInputDataSelfDescriptionMixin, ModelInputDataSelfDescriptionMixin_MultiPath
 
 
 class ExternalInferenceEngineWrapper:
@@ -67,10 +67,9 @@ class TraceFriendlyModuleAdaptor(nn.Module):
 
 
 def enable_inference_engine_by_auto_tracing(module: nn.Module,
-                                            dummy_data_generator: Union[SampleInputDataGeneratorInterface, SampleInputDataGeneratorInterface_MultiPath],
-                                            trace_fn, max_batch_size, device: torch.device):
-    if isinstance(dummy_data_generator, SampleInputDataGeneratorInterface):
-        input_data = dummy_data_generator.get(max_batch_size, device)
+                                            trace_fn, max_batch_size, device: torch.device, dtype: torch.dtype):
+    if isinstance(module, ModelInputDataSelfDescriptionMixin):
+        input_data = module.get_sample_data(max_batch_size, device, dtype, None)
         input_data_adaptor, flattened_input_data = get_trace_friendly_data_adaptor(input_data)
 
         output_data = auto_unpack_and_call(input_data, module)
@@ -79,15 +78,15 @@ def enable_inference_engine_by_auto_tracing(module: nn.Module,
         trace_friendly_module = TraceFriendlyModuleAdaptor(module, input_data_adaptor, output_data_adaptor)
         traced_module = trace_fn(trace_friendly_module, flattened_input_data, input_data_adaptor.get_data_names(), output_data_adaptor.get_data_names())
         return ExternalInferenceEngineWrapper(traced_module, input_data_adaptor, output_data_adaptor)
-    elif isinstance(dummy_data_generator, SampleInputDataGeneratorInterface_MultiPath):
+    elif isinstance(module, ModelInputDataSelfDescriptionMixin_MultiPath):
         common_input_data_adaptor_fn = None
         pattern_name_mapping = {}
 
         traced_modules = {}
         input_data_adaptors = {}
         output_data_adaptors = {}
-        for path_name in dummy_data_generator.get_path_names(with_train=False):
-            input_data = dummy_data_generator.get(path_name, max_batch_size, device)
+        for path_name in module.get_data_path_names(with_train=False):
+            input_data = module.get_sample_data(path_name, max_batch_size, device, dtype, None)
             output_data = auto_unpack_and_call(input_data, module)
 
             input_data_adaptor, flattened_input_data = get_trace_friendly_data_adaptor(input_data)
@@ -107,4 +106,4 @@ def enable_inference_engine_by_auto_tracing(module: nn.Module,
             output_data_adaptors[path_name] = output_data_adaptor
         return ExternalInferenceEngineWrapper_MultiPath(traced_modules, common_input_data_adaptor_fn, input_data_adaptors, output_data_adaptors, pattern_name_mapping)
     else:
-        raise ValueError(dummy_data_generator, f"unsupported: type {type(dummy_data_generator)}, value: {dummy_data_generator}")
+        raise TypeError(f"Module must implement ModelInputDataSelfDescriptionMixin or ModelInputDataSelfDescriptionMixin_MultiPath.")

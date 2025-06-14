@@ -488,16 +488,17 @@ _category_names = ['JetLev-Flyer',
                    'zebra-tailed lizard']
 
 
-def _construct_GOT10k_public_data(constructor: SingleObjectTrackingDatasetConstructor, sequence_list, category_name_id_map):
+def _construct_GOT10k_public_data(constructor: SingleObjectTrackingDatasetConstructor, sequence_list,
+                                  category_name_id_map, absense_cover_level):
     for sequence_name, sequence_path in sequence_list:
         images = os.listdir(sequence_path)
         images = [image for image in images if image.endswith('.jpg')]
         images.sort()
 
-        absence_array = load_numpy_array_from_txt(os.path.join(sequence_path, 'absence.label'), dtype=bool)
+        absence_array = load_numpy_array_from_txt(os.path.join(sequence_path, 'absence.label'), dtype=bool).tolist()
         # Values 0~8 in file cover.label correspond to ranges of object visible ratios: 0%, (0%, 15%], (15%~30%], (30%, 45%], (45%, 60%], (60%, 75%], (75%, 90%], (90%, 100%) and 100% respectively.
-        cover_array = load_numpy_array_from_txt(os.path.join(sequence_path, 'cover.label'), dtype=int)
-        cut_by_image_array = load_numpy_array_from_txt(os.path.join(sequence_path, 'cut_by_image.label'), dtype=bool)
+        cover_array = load_numpy_array_from_txt(os.path.join(sequence_path, 'cover.label'), dtype=int).tolist()
+        cut_by_image_array = load_numpy_array_from_txt(os.path.join(sequence_path, 'cut_by_image.label'), dtype=bool).tolist()
 
         bounding_boxes = load_numpy_array_from_txt(os.path.join(sequence_path, 'groundtruth.txt'), delimiter=',')
         bounding_boxes = try_get_int_array(bounding_boxes)
@@ -520,10 +521,13 @@ def _construct_GOT10k_public_data(constructor: SingleObjectTrackingDatasetConstr
                                                                          cover_array, cut_by_image_array):
                 with sequence_constructor.new_frame() as frame_constructor:
                     frame_constructor.set_path(os.path.join(sequence_path, image), frame_size)
-                    frame_constructor.set_bounding_box(bounding_box.tolist(), validity=not absence)
-                    frame_constructor.set_object_attribute('absence', absence.item())
-                    frame_constructor.set_object_attribute('cover', cover.item())
-                    frame_constructor.set_object_attribute('cut_by_image', cut_by_image.item())
+                    validity = not absence
+                    if absense_cover_level is not None:
+                        validity = validity and cover >= absense_cover_level
+                    frame_constructor.set_bounding_box(bounding_box.tolist(), validity=validity)
+                    frame_constructor.set_object_attribute('absence', absence)
+                    frame_constructor.set_object_attribute('cover', cover)
+                    frame_constructor.set_object_attribute('cut_by_image', cut_by_image)
 
 
 _test_split_sequence_frame_size = {'GOT-10k_Test_000001': [1920, 1080], 'GOT-10k_Test_000002': [1920, 1080], 'GOT-10k_Test_000003': [1920, 1080], 'GOT-10k_Test_000004': [1280, 720], 'GOT-10k_Test_000005': [1920, 1080], 'GOT-10k_Test_000006': [1920, 1080], 'GOT-10k_Test_000007': [1280, 720], 'GOT-10k_Test_000008': [1920, 1080], 'GOT-10k_Test_000009': [1920, 1080], 'GOT-10k_Test_000010': [1280, 720], 'GOT-10k_Test_000011': [1920, 1080], 'GOT-10k_Test_000012': [1920, 1080], 'GOT-10k_Test_000013': [1280, 720], 'GOT-10k_Test_000014': [1280, 720], 'GOT-10k_Test_000015': [1920, 1080], 'GOT-10k_Test_000016': [1280, 720], 'GOT-10k_Test_000017': [1280, 720], 'GOT-10k_Test_000018': [1280, 720], 'GOT-10k_Test_000019': [1280, 720], 'GOT-10k_Test_000020': [1280, 720], 'GOT-10k_Test_000021': [1280, 720], 'GOT-10k_Test_000022': [1280, 720], 'GOT-10k_Test_000023': [1280, 720], 'GOT-10k_Test_000024': [1280, 720], 'GOT-10k_Test_000025': [1920, 1080], 'GOT-10k_Test_000026': [1280, 720], 'GOT-10k_Test_000027': [1280, 720], 'GOT-10k_Test_000028': [1280, 720], 'GOT-10k_Test_000029': [1280, 720], 'GOT-10k_Test_000030': [1920, 1080], 'GOT-10k_Test_000031': [1280, 720], 'GOT-10k_Test_000032': [1280, 720], 'GOT-10k_Test_000033': [1280, 720], 'GOT-10k_Test_000034': [1920, 1080], 'GOT-10k_Test_000035': [1280, 720], 'GOT-10k_Test_000036': [1920, 1080], 'GOT-10k_Test_000037': [1920, 1080], 'GOT-10k_Test_000038': [1280, 720], 'GOT-10k_Test_000039': [1280, 720], 'GOT-10k_Test_000040': [1920, 1080], 'GOT-10k_Test_000041': [1280, 720], 'GOT-10k_Test_000042': [1920, 1080], 'GOT-10k_Test_000043': [1920, 1080], 'GOT-10k_Test_000044': [1280, 720], 'GOT-10k_Test_000045': [1920, 1080], 'GOT-10k_Test_000046': [1920, 1080], 'GOT-10k_Test_000047': [1920, 1080], 'GOT-10k_Test_000048': [1920, 1080], 'GOT-10k_Test_000049': [1920, 1080], 'GOT-10k_Test_000050': [1920, 1080], 'GOT-10k_Test_000051': [1920, 1080], 'GOT-10k_Test_000052': [1920, 1080], 'GOT-10k_Test_000053': [1280, 720], 'GOT-10k_Test_000054': [1280, 720], 'GOT-10k_Test_000055': [640, 480], 'GOT-10k_Test_000056': [1920, 1080], 'GOT-10k_Test_000057': [1920, 1080], 'GOT-10k_Test_000058': [1920, 1080], 'GOT-10k_Test_000059': [640, 480], 'GOT-10k_Test_000060': [1920, 1080], 'GOT-10k_Test_000061': [1280, 720], 'GOT-10k_Test_000062': [1280, 720], 'GOT-10k_Test_000063': [1920, 1080], 'GOT-10k_Test_000064': [656, 480], 'GOT-10k_Test_000065': [960, 720], 'GOT-10k_Test_000066': [1280, 720], 'GOT-10k_Test_000067': [1280, 720], 'GOT-10k_Test_000068': [1920, 1080], 'GOT-10k_Test_000069': [1280, 720], 'GOT-10k_Test_000070': [1280, 720], 'GOT-10k_Test_000071': [1280, 720], 'GOT-10k_Test_000072': [640, 480], 'GOT-10k_Test_000073': [640, 480], 'GOT-10k_Test_000074': [1920, 1080], 'GOT-10k_Test_000075': [1920, 1080], 'GOT-10k_Test_000076': [1280, 720], 'GOT-10k_Test_000077': [1280, 720], 'GOT-10k_Test_000078': [1280, 720], 'GOT-10k_Test_000079': [1280, 720], 'GOT-10k_Test_000080': [1920, 1080], 'GOT-10k_Test_000081': [1920, 1080], 'GOT-10k_Test_000082': [1920, 1080], 'GOT-10k_Test_000083': [1920, 1080], 'GOT-10k_Test_000084': [1920, 1080], 'GOT-10k_Test_000085': [1280, 720], 'GOT-10k_Test_000086': [1280, 720], 'GOT-10k_Test_000087': [1280, 720], 'GOT-10k_Test_000088': [1280, 720], 'GOT-10k_Test_000089': [1920, 1080], 'GOT-10k_Test_000090': [1920, 1080], 'GOT-10k_Test_000091': [1920, 1080], 'GOT-10k_Test_000092': [1920, 1080], 'GOT-10k_Test_000093': [1920, 1080], 'GOT-10k_Test_000094': [1920, 1080], 'GOT-10k_Test_000095': [1920, 1080], 'GOT-10k_Test_000096': [1920, 1080], 'GOT-10k_Test_000097': [1280, 720], 'GOT-10k_Test_000098': [1920, 1080], 'GOT-10k_Test_000099': [1920, 1080], 'GOT-10k_Test_000100': [1920, 1080], 'GOT-10k_Test_000101': [640, 480], 'GOT-10k_Test_000102': [640, 480], 'GOT-10k_Test_000103': [1920, 1080], 'GOT-10k_Test_000104': [1920, 1080], 'GOT-10k_Test_000105': [1920, 1080], 'GOT-10k_Test_000106': [1280, 720], 'GOT-10k_Test_000107': [3840, 2160], 'GOT-10k_Test_000108': [1280, 720], 'GOT-10k_Test_000109': [1280, 720], 'GOT-10k_Test_000110': [3840, 2160], 'GOT-10k_Test_000111': [1920, 1080], 'GOT-10k_Test_000112': [1280, 720], 'GOT-10k_Test_000113': [1280, 720], 'GOT-10k_Test_000114': [1920, 1080], 'GOT-10k_Test_000115': [1920, 1080], 'GOT-10k_Test_000116': [1920, 1080], 'GOT-10k_Test_000117': [1920, 1080], 'GOT-10k_Test_000118': [1920, 1080], 'GOT-10k_Test_000119': [1920, 1080], 'GOT-10k_Test_000120': [1920, 1080], 'GOT-10k_Test_000121': [1920, 1080], 'GOT-10k_Test_000122': [1920, 1080], 'GOT-10k_Test_000123': [1920, 1080], 'GOT-10k_Test_000124': [640, 480], 'GOT-10k_Test_000125': [1280, 720], 'GOT-10k_Test_000126': [1280, 720], 'GOT-10k_Test_000127': [270, 480], 'GOT-10k_Test_000128': [1920, 1080], 'GOT-10k_Test_000129': [1920, 1080], 'GOT-10k_Test_000130': [1280, 720], 'GOT-10k_Test_000131': [1280, 720], 'GOT-10k_Test_000132': [1920, 1080], 'GOT-10k_Test_000133': [1920, 1080], 'GOT-10k_Test_000134': [1280, 720], 'GOT-10k_Test_000135': [1920, 1080], 'GOT-10k_Test_000136': [1920, 1080], 'GOT-10k_Test_000137': [1280, 720], 'GOT-10k_Test_000138': [3840, 2026], 'GOT-10k_Test_000139': [1280, 720], 'GOT-10k_Test_000140': [1280, 720], 'GOT-10k_Test_000141': [1920, 1080], 'GOT-10k_Test_000142': [1280, 720], 'GOT-10k_Test_000143': [1920, 1080], 'GOT-10k_Test_000144': [1920, 1080], 'GOT-10k_Test_000145': [1280, 720], 'GOT-10k_Test_000146': [1280, 720], 'GOT-10k_Test_000147': [1920, 1080], 'GOT-10k_Test_000148': [1280, 720], 'GOT-10k_Test_000149': [1920, 1080], 'GOT-10k_Test_000150': [1920, 1080], 'GOT-10k_Test_000151': [1920, 1080], 'GOT-10k_Test_000152': [1920, 1080], 'GOT-10k_Test_000153': [1920, 1080], 'GOT-10k_Test_000154': [1920, 1080], 'GOT-10k_Test_000155': [1920, 1080], 'GOT-10k_Test_000156': [1920, 1080], 'GOT-10k_Test_000157': [1280, 720], 'GOT-10k_Test_000158': [1280, 720], 'GOT-10k_Test_000159': [1280, 720], 'GOT-10k_Test_000160': [1280, 720], 'GOT-10k_Test_000161': [1920, 1080], 'GOT-10k_Test_000162': [1280, 720], 'GOT-10k_Test_000163': [1920, 1080], 'GOT-10k_Test_000164': [1280, 720], 'GOT-10k_Test_000165': [3840, 2160], 'GOT-10k_Test_000166': [1920, 1080], 'GOT-10k_Test_000167': [1920, 1080], 'GOT-10k_Test_000168': [1920, 1080], 'GOT-10k_Test_000169': [1920, 1080], 'GOT-10k_Test_000170': [1920, 1080], 'GOT-10k_Test_000171': [854, 480], 'GOT-10k_Test_000172': [854, 480], 'GOT-10k_Test_000173': [1280, 720], 'GOT-10k_Test_000174': [1920, 1080], 'GOT-10k_Test_000175': [640, 480], 'GOT-10k_Test_000176': [1280, 720], 'GOT-10k_Test_000177': [1920, 1080], 'GOT-10k_Test_000178': [1920, 1080], 'GOT-10k_Test_000179': [1920, 1080], 'GOT-10k_Test_000180': [3840, 2160]}
@@ -554,6 +558,7 @@ def construct_GOT10k(constructor: SingleObjectTrackingDatasetConstructor, seed):
     root_path = seed.root_path
     data_split = seed.data_split
     data_specs = seed.data_specs
+    absense_cover_level = seed.absense_cover_level
 
     assert len(data_split) == 1, data_split
     data_split = data_split[0]
@@ -575,6 +580,6 @@ def construct_GOT10k(constructor: SingleObjectTrackingDatasetConstructor, seed):
     constructor.set_total_number_of_sequences(len(sequence_list))
 
     if data_split in ('train', 'val'):
-        _construct_GOT10k_public_data(constructor, sequence_list, {v: k for k, v in enumerate(_category_names)})
+        _construct_GOT10k_public_data(constructor, sequence_list, {v: k for k, v in enumerate(_category_names)}, absense_cover_level)
     else:
         _construct_GOT10k_non_public_data(constructor, sequence_list)

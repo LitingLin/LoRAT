@@ -19,7 +19,8 @@ def build_random_sequence_picker(datasets: Sequence[TrackingDataset], sequence_p
     dataset_sampling_weights = get_dataset_sampling_weight(datasets, sequence_picking_config)
     sequence_picker = RandomSequencePicker(tuple(len(dataset) for dataset in datasets), dataset_sampling_weights, samples_per_epoch, seed, init=False)
 
-    build_context.services.event.register_on_epoch_begin_event_listener(lambda epoch, is_train: sequence_picker.shuffle())
+    build_context.services.event.register_on_epoch_begin_event_listener(
+        lambda epoch, is_train: sequence_picker.shuffle())
     build_context.services.checkpoint.register('random_sequence_picker', sequence_picker.get_state, sequence_picker.set_state)
     build_context.variables['num_samples_per_epoch'] = samples_per_epoch
 

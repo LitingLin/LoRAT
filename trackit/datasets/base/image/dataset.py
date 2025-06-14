@@ -1,8 +1,8 @@
 import os
 from trackit.datasets.base.common.dataset import _BaseDataset, _BaseDatasetObject
-from trackit.miscellanies.operating_system.path import join_paths
+from trackit.miscellanies.system.operating_system.path import join_paths
 
-__version__ = 4
+__version__ = 5
 
 
 class ImageDatasetImage:

@@ -8,8 +8,13 @@ class VastTrack_Seed(BaseSeed):
                 root_path = self.get_path_from_config('VastTrack_TRAIN_PATH')
             if data_split == 'test':
                 root_path = self.get_path_from_config('VastTrack_TEST_PATH')
-        super().__init__('VastTrack', root_path, data_split, ('train', 'test'), 1)
+        super().__init__('VastTrack', root_path, data_split, ('train', 'test'))
 
     def construct(self, constructor):
         from .Impl.VastTrack import construct_VastTrack
         construct_VastTrack(constructor, self)
+
+
+def get_VastTrack_test_set_attributes():
+    from .Impl.VastTrack import VastTrackTestSetAttributes
+    return VastTrackTestSetAttributes

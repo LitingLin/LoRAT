@@ -12,9 +12,9 @@ def should_use_data_parallel(device: torch.device) -> bool:
     Returns:
         bool: True if DataParallel should be used, False otherwise.
     """
-    from trackit.miscellanies.torch.distributed import is_dist_initialized
+    from trackit.miscellanies.torch.distributed import get_world_size
     return (
-        not is_dist_initialized() and
+        get_world_size() == 1 and
         device.type == 'cuda' and
         torch.cuda.is_available() and
         torch.cuda.device_count() > 1

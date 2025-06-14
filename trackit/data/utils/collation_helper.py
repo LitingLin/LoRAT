@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from typing import Sequence, Union, Tuple, List
 import torch.utils.data
+TORCH_2_0 = int(torch.__version__.split('.')[0]) >= 2
 
 
 # from torch.utils.data._utils.collate
@@ -12,7 +13,7 @@ def _collate_tensor_fn(batch: Union[Tuple[torch.Tensor, ...], List[torch.Tensor]
         # If we're in a background process, concatenate directly into a
         # shared memory tensor to avoid an extra copy
         numel = sum(x.numel() for x in batch)
-        storage = elem._typed_storage()._new_shared(numel, device=elem.device)
+        storage = elem._typed_storage()._new_shared(numel, device=elem.device) if TORCH_2_0 else elem.storage()._new_shared(numel, device=elem.device)
         new_shape = list(elem.size())
         new_shape.insert(dim, len(batch))
         out = elem.new(storage).resize_(*new_shape)
