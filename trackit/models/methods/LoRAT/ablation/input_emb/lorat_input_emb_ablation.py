@@ -2,7 +2,7 @@ from itertools import chain
 from typing import Tuple
 import torch
 import torch.nn as nn
-from timm.layers import trunc_normal_
+from torch.nn.init import trunc_normal_
 
 from trackit.models import ModelInputDataSelfDescriptionMixin
 from trackit.models.backbone.dinov2.model import DinoVisionTransformer, interpolate_pos_encoding

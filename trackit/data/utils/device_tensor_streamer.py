@@ -75,7 +75,7 @@ class CUDATensorStreamer_WithDataPrefetching:
         if data is StopIteration:
             if hasattr(self, 'stream'):
                 del self.stream
-            gc.collect()
+                del self.iter
             raise StopIteration
 
         for tensor in tensor_list:

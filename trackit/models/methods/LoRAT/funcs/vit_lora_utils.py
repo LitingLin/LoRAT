@@ -44,7 +44,7 @@ def enable_lora_(self: nn.Module, lora_r: int, lora_alpha: float, lora_dropout: 
     Patch LoRA for the given model.
 
     Args:
-        model (nn.Module): The model to apply LoRA to.
+        self (nn.Module): The model to apply LoRA to.
         lora_r (int): The rank of the LoRA.
         lora_alpha (float): The scaling factor for LoRA.
         lora_dropout (float): The dropout rate for LoRA.

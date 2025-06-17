@@ -1,7 +1,7 @@
 import torch
 import math
 import torch.nn as nn
-from timm.layers import trunc_normal_
+from torch.nn.init import trunc_normal_
 
 from .merge import lora_merge, lora_unmerge
 

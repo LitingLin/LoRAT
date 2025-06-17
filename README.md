@@ -29,8 +29,8 @@ Update codebase:
 - Fix grad accumulation.
 - Refactor the tracker evaluation pipeline.
 - Add support for compiled autograd.
-- Data pipeline support specify dtype, BF16 training, FP16 inference is allowed.
-- Initial support for deepspeed.
+- Data pipeline supports specifying dtype; BF16 training and FP16 inference are allowed.
+- Initial support for DeepSpeed.
 - CPU inference enhancements.
 - MPS on macOS supported.
 - Some minor bug fixes and code refactoring.
@@ -246,7 +246,7 @@ checkpoint:
 Load the last checkpoint by specifying the `--resume` argument and the `--wegiht_path` argument:
 
 ```shell
-./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin resumable --weight_path /path/to/output/run_id/checkpoint/epoch_{last}/model.bin --resume /path/to/output/run_id/checkpoint/epoch_{last}/state.tar
+./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin resumable --weight_path /path/to/output/run_id/checkpoint/epoch_{last}/model.safetensors --resume /path/to/output/run_id/checkpoint/epoch_{last}/state.tar
 ```
 Note that the `--weight_path` argument is required to load the model weights, while the `--resume` argument is used to load the training state.
 ## Citation

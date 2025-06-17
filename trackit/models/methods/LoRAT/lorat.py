@@ -1,7 +1,7 @@
 from typing import Tuple, Union, Iterable, Mapping
 import torch
 import torch.nn as nn
-from timm.layers import trunc_normal_
+from torch.nn.init import trunc_normal_
 from trackit.models.backbone.dinov2.model import DinoVisionTransformer, interpolate_pos_encoding
 from .modules.patch_embed import PatchEmbedNoSizeCheck
 from .modules.head.mlp import MlpAnchorFreeHead

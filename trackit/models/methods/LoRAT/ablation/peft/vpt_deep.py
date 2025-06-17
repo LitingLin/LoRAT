@@ -4,8 +4,8 @@ import torch.nn as nn
 from functools import reduce
 from operator import mul
 import math
-from timm.layers import to_2tuple
-from timm.layers import trunc_normal_
+from torch.nn.modules.utils import _pair
+from torch.nn.init import trunc_normal_
 
 from trackit.models import ModelInputDataSelfDescriptionMixin
 from trackit.models.backbone.dinov2.model import DinoVisionTransformer, interpolate_pos_encoding
@@ -48,7 +48,7 @@ class LoRAT_DINOv2(nn.Module, ModelInputDataSelfDescriptionMixin):
         self.num_prompt_tokens = num_prompt_tokens  # number of prompted tokens
 
         # initiate prompt:
-        val = math.sqrt(6. / float(3 * reduce(mul, to_2tuple(self.patch_embed.patch_size), 1) + self.embed_dim))
+        val = math.sqrt(6. / float(3 * reduce(mul, _pair(self.patch_embed.patch_size), 1) + self.embed_dim))
 
         num_layers = len(self.blocks)
         self.prompt_embeddings = nn.ParameterList([

@@ -2,7 +2,7 @@ from typing import Tuple
 
 import torch
 from torch import nn
-from timm.layers import trunc_normal_
+from torch.nn.init import trunc_normal_
 from trackit.core.utils.anchor_free_reference_points import get_anchor_free_reference_points
 
 

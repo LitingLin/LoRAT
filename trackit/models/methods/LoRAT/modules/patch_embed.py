@@ -1,6 +1,6 @@
 from typing import Tuple, Optional, Callable
 import torch.nn as nn
-from timm.layers import to_2tuple
+from torch.nn.modules.utils import _pair
 from trackit.models.backbone.dinov2.layers.patch_embed import PatchEmbed
 
 
@@ -15,7 +15,7 @@ class PatchEmbedNoSizeCheck(nn.Module):
                  norm_layer: Optional[Callable] = None,
                  patch_size: Tuple[int, int] = (16, 16)):
         super().__init__()
-        self.patch_size = to_2tuple(patch_size)
+        self.patch_size = _pair(patch_size)
         self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 

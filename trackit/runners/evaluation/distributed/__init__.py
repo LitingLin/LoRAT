@@ -1,8 +1,10 @@
+import gc
 from typing import Optional
 
 import torch
-import gc
+import torch._C
 
+from trackit.miscellanies.torch.check_version import is_torch_version_greater_or_equal
 from trackit.runners import Runner
 from trackit.models import ModelManager
 from trackit.models.compiling import InferenceEngine, OptimizedModel
@@ -55,6 +57,10 @@ class DefaultTrackerEvaluationRunner(Runner):
         self.optimized_model = None
         del self.evaluator_context
         gc.collect()
+        if self._device.type == 'cuda':
+            torch.cuda.empty_cache()
+            if is_torch_version_greater_or_equal((2, 5)):
+                torch._C._host_emptyCache()
 
     def run(self, data: TrackerEvalData):
         assert self.task_name is not None
