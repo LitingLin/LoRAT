@@ -7,7 +7,7 @@ import os
 
 def prepare_vot_workspace(workspace_path: str, tracker_name: str, tracker_launch_command: str, vot_stack_name: str,
                           root_path: str, trax_timeout: int):
-    dataset_path = get_global_constant(vot_stacks[vot_stack_name].path_name)
+    dataset_path = get_global_constant(vot_stacks[vot_stack_name].path_name, default='')
     os.makedirs(workspace_path, exist_ok=True)
     if len(dataset_path) > 0 and os.path.exists(dataset_path):
         os.mkdir(os.path.join(workspace_path, 'results'))

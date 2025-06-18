@@ -4,7 +4,6 @@ from typing import Optional
 import torch
 import torch._C
 
-from trackit.miscellanies.torch.check_version import is_torch_version_greater_or_equal
 from trackit.runners import Runner
 from trackit.models import ModelManager
 from trackit.models.compiling import InferenceEngine, OptimizedModel
@@ -59,7 +58,7 @@ class DefaultTrackerEvaluationRunner(Runner):
         gc.collect()
         if self._device.type == 'cuda':
             torch.cuda.empty_cache()
-            if is_torch_version_greater_or_equal((2, 5)):
+            if hasattr(torch._C, '_host_emptyCache'):
                 torch._C._host_emptyCache()
 
     def run(self, data: TrackerEvalData):
