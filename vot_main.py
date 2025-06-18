@@ -16,6 +16,7 @@ def setup_arg_parser():
     arg_parser.add_argument('--run_id', type=str)
     arg_parser.add_argument('--weight_path', type=str)
     arg_parser.add_argument('--enable_file_logging', action='store_true')
+    arg_parser.add_argument('--no_auto_attach_vot_mixin', action='store_true')
     return arg_parser
 
 

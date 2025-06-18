@@ -8,3 +8,6 @@
     action: "merge"
     value:
       region_format: "rectangle"
+  - path: "run"
+    action: "remove"
+    value: "checkpoint"

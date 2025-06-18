@@ -34,6 +34,7 @@ Update codebase:
 - Initial support for DeepSpeed.
 - CPU inference enhancements.
 - MPS on macOS supported.
+- Compatibility with latest VOT Toolkit.
 - Some minor bug fixes and code refactoring.
 ## Prerequisites
 ### Environment
