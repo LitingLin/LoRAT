@@ -25,6 +25,7 @@ Update: results on VastTrack
 
 [June 14, 2025] 
 Update codebase:
+- Add MAE, CLIP, EVA02 backbones (see config/LoRAT_timm).
 - Resumable checkpointing.
 - Fix grad accumulation.
 - Refactor the tracker evaluation pipeline.
