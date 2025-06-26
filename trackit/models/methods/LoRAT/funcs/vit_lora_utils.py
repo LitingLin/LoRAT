@@ -17,7 +17,7 @@ def find_all_frozen_nn_linear_names(model):
         if isinstance(module, cls) and not module.weight.requires_grad:
             lora_module_names.add(name)
 
-    return list(lora_module_names)
+    return sorted(list(lora_module_names))
 
 
 def apply_lora(model: nn.Module, lora_module_names: List[str],

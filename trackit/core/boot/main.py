@@ -1,4 +1,4 @@
-import os.path
+import os
 
 from .funcs.utils.debugging import enable_stack_trace_on_error, enable_rich_logging, enable_strict_numeric_error_handling
 from .funcs.utils.disable_multithreading import disable_multithreading
@@ -25,6 +25,13 @@ def main(runtime_vars):
         from .funcs.utils.kill_other_python_processes import kill_other_python_processes
         kill_other_python_processes()
 
+    if runtime_vars.use_deterministic_algorithms:
+        if 'cuda' in runtime_vars.device:
+            # Set CUBLAS workspace config to a fixed size for reproducibility
+            # This is important for deterministic behavior in CUDA operations
+            # See: https://docs.nvidia.com/cuda/cublas/#results-reproducibility
+            os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+
     if runtime_vars.run_id is None:
         from .funcs.utils.run_id import generate_run_id
         runtime_vars.run_id = generate_run_id(runtime_vars)
@@ -38,6 +45,11 @@ def main(runtime_vars):
             disable_multithreading()
         from .funcs.main.torch_distributed_do_spawn_workers import spawn_workers
         return spawn_workers(runtime_vars)
+
+    if runtime_vars.use_deterministic_algorithms:
+        import torch
+        torch.use_deterministic_algorithms(True, warn_only=True)
+        print("torch: Using deterministic algorithms.")
 
     enable_strict_numeric_error_handling()
 

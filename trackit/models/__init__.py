@@ -1,5 +1,6 @@
 import os.path
-
+import random
+import numpy as np
 import torch
 import torch.nn as nn
 from dataclasses import dataclass
@@ -206,9 +207,55 @@ class ExternalModelUpdater:
         self._parent._version += 1
 
 
+class _ReproducibleHelper:
+    def __init__(self, seed: Optional[int], device: torch.device):
+        self.seed = seed
+        self.device = device
+        self.original_states = {}
+
+    def __enter__(self):
+        if self.seed is None:
+            return self
+        # --- 1. Save the original RNG states ---
+        self.original_states['random'] = random.getstate()
+        self.original_states['numpy'] = np.random.get_state()
+        self.original_states['torch'] = torch.default_generator.get_state()
+        if self.device.type == 'cuda':
+            self.original_states['torch.cuda'] = torch.cuda.get_rng_state(self.device)
+        if self.device.type == 'mps':
+            self.original_states['torch.mps'] = torch.mps.get_rng_state(self.device)
+
+        # --- 2. Set the new seed for all libraries ---
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+        torch.default_generator.manual_seed(self.seed)
+        if self.device.type == 'cuda':
+            torch.cuda.manual_seed(self.seed)
+        if self.device.type == 'mps':
+            torch.mps.manual_seed(self.seed)
+
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.seed is None:
+            return False
+        # --- 3. Restore the original RNG states ---
+        random.setstate(self.original_states['random'])
+        np.random.set_state(self.original_states['numpy'])
+        torch.default_generator.set_state(self.original_states['torch'])
+        if self.device.type == 'cuda':
+            torch.cuda.set_rng_state(self.original_states['torch.cuda'], self.device)
+        if self.device.type == 'mps':
+            torch.mps.set_rng_state(self.original_states['torch.mps'], self.device)
+
+        self.original_states.clear()
+        return False
+
+
 class ModelManager:
-    def __init__(self, model_building_context: ModelBuildContext):
+    def __init__(self, model_building_context: ModelBuildContext, rng_fixed_seed: Optional[int] = None):
         self._create_fn = model_building_context.create_fn
+        self._rng_fixed_seed = rng_fixed_seed
         self._fingerprint_generator = model_building_context.fingerprint_fn
         self._model_instance_cache = WeakValueDictionary()
         self._version: int = 0
@@ -230,8 +277,8 @@ class ModelManager:
                load_pretrained: bool = True) -> ModelInstance:
         impl_suggestions = ModelImplementationSuggestions(device, dtype, torch_jit_trace_compatible, optimize_for_inference,
                                                           load_pretrained)
-        fingerprint = self._fingerprint_generator(impl_suggestions)
-        model_instance = self._model_instance_cache.get(fingerprint)
+        fingerprint_string = self._fingerprint_generator(impl_suggestions)
+        model_instance = self._model_instance_cache.get(fingerprint_string)
         if model_instance is not None:
             if model_instance._version != self._version:
                 for load_fn in self._states_to_be_load:
@@ -239,13 +286,14 @@ class ModelManager:
                 _load_state_dict(model_instance._model, self._latest_model_state.state_dict(), strict=False, print_missing=True)
                 model_instance._version = self._version
         else:
-            model = self._create_fn(impl_suggestions)
+            with _ReproducibleHelper(self._rng_fixed_seed, device):
+                model = self._create_fn(impl_suggestions)
             for load_fn in self._states_to_be_load:
                 load_fn(model, device)
             if self._version > 0:
                 _load_state_dict(model, self._latest_model_state.state_dict(), strict=False, print_missing=True)
-            model_instance = ModelInstance(model, device, dtype, self._version, fingerprint, self)
-            self._model_instance_cache[fingerprint] = model_instance
+            model_instance = ModelInstance(model, device, dtype, self._version, fingerprint_string, self)
+            self._model_instance_cache[fingerprint_string] = model_instance
 
         return model_instance
 
@@ -255,7 +303,8 @@ class ModelManager:
                          load_pretrained: bool = True) -> nn.Module:
         impl_suggestions = ModelImplementationSuggestions(device, dtype, torch_jit_trace_compatible, optimize_for_inference,
                                                           load_pretrained)
-        model = self._create_fn(impl_suggestions)
+        with _ReproducibleHelper(self._rng_fixed_seed, device):
+            model = self._create_fn(impl_suggestions)
         for load_fn in self._states_to_be_load:
             load_fn(model, device)
         if self._version > 0:

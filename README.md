@@ -36,6 +36,11 @@ Update codebase:
 - MPS on macOS supported.
 - Compatibility with latest VOT Toolkit.
 - Some minor bug fixes and code refactoring.
+
+[June 26, 2025]
+Update codebase:
+- Improve training reproducibility for future work.
+
 ## Prerequisites
 ### Environment
 Assuming you have a working python environment with pip installed.

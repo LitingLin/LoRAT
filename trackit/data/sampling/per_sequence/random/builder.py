@@ -15,6 +15,8 @@ def build_random_sequence_picker(datasets: Sequence[TrackingDataset], sequence_p
         samples_per_epoch = sum(len(dataset) for dataset in datasets)
 
     seed = sequence_picking_config.get('seed', None)
+    if seed is None:
+        seed = build_context.global_synchronized_rng.integers(0, 2**31 - 1).item()
 
     dataset_sampling_weights = get_dataset_sampling_weight(datasets, sequence_picking_config)
     sequence_picker = RandomSequencePicker(tuple(len(dataset) for dataset in datasets), dataset_sampling_weights, samples_per_epoch, seed, init=False)

@@ -46,6 +46,8 @@ def setup_arg_parser():
 
     parser.add_argument('--enable_profiling', action='store_true')
 
+    parser.add_argument('--use_deterministic_algorithms', action='store_true')
+
     return parser
 
 

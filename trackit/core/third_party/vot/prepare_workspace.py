@@ -28,6 +28,6 @@ def prepare_vot_workspace(workspace_path: str, tracker_name: str, tracker_launch
         f.write('protocol = trax\n')
         f.write(f'command = {tracker_launch_command}\n')
         f.write(f'env_PYTHONPATH = {root_path}\n')
-        f.write(f'env_PYTHONUNBUFFERED = 1\n')
+        f.write('env_PYTHONUNBUFFERED = 1\n')
         f.write(f'timeout = {trax_timeout}\n')
         f.write('socket = 1\n')

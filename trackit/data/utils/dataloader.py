@@ -26,10 +26,15 @@ def build_dataloader(dataset: torch.utils.data.Dataset, batch_size: Optional[int
     if collate_fn is None and batch_size is None:
         collate_fn = no_op_collate_fn
 
+    dataloader_rng = torch.Generator()
+    seed = build_context.global_synchronized_rng.integers(0, 2**31 - 1).item()
+    dataloader_rng.manual_seed(seed)
+
     if isinstance(dataset, torch.utils.data.IterableDataset):
         data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, drop_last=False,
                                                   worker_init_fn=worker_init_fn,
-                                                  num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory)
+                                                  num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
+                                                  generator=dataloader_rng)
     else:
         has_len = True
         try:
@@ -38,13 +43,15 @@ def build_dataloader(dataset: torch.utils.data.Dataset, batch_size: Optional[int
             has_len = False
         if has_len:
             if torch_distributed_enabled:
-                sampler = torch.utils.data.DistributedSampler(dataset, shuffle=do_shuffle)
+                sampler = torch.utils.data.DistributedSampler(dataset,
+                                                              seed=build_context.global_synchronized_rng.integers(0, 2**31 - 1).item(),
+                                                              shuffle=do_shuffle)
                 if do_shuffle:
                     build_context.services.event.register_on_epoch_begin_event_listener(
                         lambda epoch, is_train: sampler.set_epoch(epoch))
             else:
                 if do_shuffle:
-                    sampler = torch.utils.data.RandomSampler(dataset)
+                    sampler = torch.utils.data.RandomSampler(dataset, generator=dataloader_rng)
                 else:
                     sampler = torch.utils.data.SequentialSampler(dataset)
         else:
@@ -56,10 +63,12 @@ def build_dataloader(dataset: torch.utils.data.Dataset, batch_size: Optional[int
 
         data_loader = torch.utils.data.DataLoader(dataset, sampler=sampler, batch_size=batch_size, drop_last=drop_last,
                                                   worker_init_fn=worker_init_fn,
-                                                  num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory)
+                                                  num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory,
+                                                  generator=dataloader_rng)
 
     build_context.services.event.register_on_epoch_begin_event_listener(worker_info_initializer.on_epoch_begin)
     build_context.services.event.register_on_epoch_end_event_listener(worker_info_initializer.on_epoch_end)
+    build_context.services.checkpoint.register('data_loader_rng', dataloader_rng.get_state, dataloader_rng.set_state)
 
     if device.type != 'cpu' and device_tensor_selection_filter is not None:
         data_loader = build_device_tensor_streamer(data_loader, device, device_tensor_selection_filter, pin_memory)

@@ -76,35 +76,32 @@ class SiameseTrackerTrainingDataWorker(torch.utils.data.Dataset):
         self.siamese_training_pair_generator = siamese_training_pair_generator
         self.num_io_threads = num_io_threads
         self.background_io_threads: Optional[concurrent.futures.ThreadPoolExecutor] = None
-        self.rng = None
+        self.rng_seed = None
         self.transform = data_transform
 
     def worker_init(self):
-        rng_seed = get_current_worker_info().rng_seed
+        self.rng_seed = get_current_worker_info().rng_seed
         if self.num_io_threads > 0:
             self.background_io_threads = concurrent.futures.ThreadPoolExecutor(self.num_io_threads)
-            seeds = rng_seed.spawn(self.batch_size)
-            self.batch_element_rng = tuple(np.random.default_rng(seed) for seed in seeds)
-        self.rng = np.random.default_rng(rng_seed.spawn(1)[0].generate_state(1).item())
 
     def worker_shutdown(self):
         if self.num_io_threads > 0:
             self.background_io_threads.shutdown()
-            self.batch_element_rng = None
         self.background_io_threads = None
-        self.rng = None
+        self.rng_seed = None
 
     def __getitems__(self, job_indices: Sequence[int]):
-        if self.rng is None:
+        if self.rng_seed is None:
             self.worker_init()
 
         if self.num_io_threads > 0:
             io_wait_time = 0
             begin_time = time.perf_counter()
+            batch_element_rng = tuple(np.random.Generator(np.random.PCG64(self.rng_seed + (job_index,))) for job_index in job_indices)
             jobs = tuple(self.background_io_threads.submit(_prepare_siamese_training_pair,
                                                         job_index,
                                                            self.datasets, self.siamese_training_pair_generator,
-                                                           self.batch_element_rng[batch_element_index], True,
+                                                           batch_element_rng[batch_element_index], True,
                                                            job_index, batch_element_index)
                          for batch_element_index, job_index in enumerate(job_indices))
             batch = {}
@@ -114,12 +111,12 @@ class SiameseTrackerTrainingDataWorker(torch.utils.data.Dataset):
                 io_wait_time += time.perf_counter() - io_begin_time
                 for job_future in done_jobs:
                     job_index, batch_element_index, siamese_training_pair = job_future.result()
-                    data = self.transform(siamese_training_pair, self.rng)
+                    data = self.transform(siamese_training_pair, batch_element_rng[batch_element_index])
                     if data is None:
                         job = self.background_io_threads.submit(_prepare_siamese_training_pair,
                                                                 None,
                                                                 self.datasets, self.siamese_training_pair_generator,
-                                                                self.batch_element_rng[batch_element_index], True,
+                                                                batch_element_rng[batch_element_index], True,
                                                                 job_index, batch_element_index)
                         unfinished_jobs = list(unfinished_jobs)
                         unfinished_jobs.append(job)
@@ -134,30 +131,32 @@ class SiameseTrackerTrainingDataWorker(torch.utils.data.Dataset):
         else:
             batch = []
             for job_index in job_indices:
+                rng = np.random.Generator(np.random.PCG64(self.rng_seed + (job_index,)))
                 siamese_training_pair = _prepare_siamese_training_pair(job_index,
                                                                        self.datasets, self.siamese_training_pair_generator,
-                                                                       self.rng, False)
-                data = self.transform(siamese_training_pair, self.rng)
+                                                                       rng, False)
+                data = self.transform(siamese_training_pair, rng)
                 while data is None:
                     siamese_training_pair = _prepare_siamese_training_pair(None,
                                                                            self.datasets, self.siamese_training_pair_generator,
-                                                                           self.rng, False)
-                    data = self.transform(siamese_training_pair, self.rng)
+                                                                           rng, False)
+                    data = self.transform(siamese_training_pair, rng)
                 batch.append(data)
             return batch, None
 
     def __getitem__(self, job_index: int):
-        if self.rng is None:
+        if self.rng_seed is None:
             self.worker_init()
+        rng = np.random.Generator(np.random.PCG64(self.rng_seed + (job_index,)))
         siamese_training_pair = _prepare_siamese_training_pair(job_index,
                                                                self.datasets, self.siamese_training_pair_generator,
-                                                               self.rng, False)
-        data = self.transform(siamese_training_pair, self.rng)
+                                                               rng, False)
+        data = self.transform(siamese_training_pair, rng)
         while data is None:
             siamese_training_pair = _prepare_siamese_training_pair(None,
                                                                    self.datasets, self.siamese_training_pair_generator,
-                                                                   self.rng, False)
-            data = self.transform(siamese_training_pair, self.rng)
+                                                                   rng, False)
+            data = self.transform(siamese_training_pair, rng)
         return data
 
 

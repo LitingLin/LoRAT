@@ -1,6 +1,5 @@
 import os.path
-from typing import Optional
-import numpy as np
+from typing import Optional, Tuple
 from dataclasses import dataclass, field
 from trackit.core.runtime.context.epoch import get_current_epoch_context
 
@@ -18,7 +17,7 @@ class WorkerInfo:
     world_size: int
     epoch: int
     is_train: int
-    rng_seed: np.random.SeedSequence
+    rng_seed: Tuple[int, ...]
     in_background_process: bool
     _output_path: str
     __mutable_variables: _MutableVariables = field(default_factory=_MutableVariables)
@@ -47,7 +46,7 @@ def get_current_worker_info() -> Optional[WorkerInfo]:
 
 def _set_worker_info(worker_id: int, num_local_workers: int, rank: int, world_size: int, epoch: int, is_train: bool,
                      seed: int, in_background_process: bool, output_path: Optional[str]):
-    rng_seed = np.random.SeedSequence((seed, rank, worker_id, epoch, int(is_train)))
+    rng_seed = (seed, rank, epoch, int(is_train))
     global __worker_info
     __worker_info = WorkerInfo(worker_id, num_local_workers, rank, world_size, epoch, is_train, rng_seed,
                                in_background_process, output_path)

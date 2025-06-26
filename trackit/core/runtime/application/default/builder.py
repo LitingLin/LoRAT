@@ -100,7 +100,7 @@ def build_default_application(config: dict, runtime_vars,
         name = runtime_vars.method_name + '-' + runtime_vars.config_name
 
     # build model factory
-    model_manager = ModelManager(create_model_build_context(config))
+    model_manager = ModelManager(create_model_build_context(config), runtime_vars.seed)
 
     model_profiler = build_model_profiler(config, runtime_vars, wandb_instance)
     if model_profiler is not None:

@@ -6,21 +6,11 @@ from torch.nn.init import trunc_normal_
 from trackit.models import ModelInputDataSelfDescriptionMixin
 from trackit.models.backbone.dinov2.model import DinoVisionTransformer, interpolate_pos_encoding
 from ..funcs.sample_data import generate_LoRAT_sample_data
-from ..funcs.vit_lora_utils import state_dict_with_lora_meta_attributes, load_state_dict_with_lora_meta_attributes
+from ..funcs.vit_lora_utils import state_dict_with_lora_meta_attributes, load_state_dict_with_lora_meta_attributes, find_all_frozen_nn_linear_names
 from ..modules.patch_embed import PatchEmbedNoSizeCheck
 from ..modules.lora import LinearWithLoRA, LinearWithLoRA_QKVFused
 from ..modules.head.mlp import MlpAnchorFreeHead
 from typing import List
-
-
-def find_all_frozen_nn_linear_names(model):
-    cls = nn.Linear
-    lora_module_names = set()
-    for name, module in model.named_modules():
-        if isinstance(module, cls) and not module.weight.requires_grad:
-            lora_module_names.add(name)
-
-    return list(lora_module_names)
 
 
 def apply_lora(model: nn.Module, lora_module_names: List[str],

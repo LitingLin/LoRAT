@@ -33,6 +33,7 @@ print_help() {
     echo "  --enable_file_logging      Enable file logging (default)"
     echo "  --disable_file_logging     Disable file logging"
     echo "  --enable_profiling         Enable profiling"
+    echo "  --use_deterministic_algorithms  Use deterministic algorithms (default: false)"
 }
 
 if [[ $# -eq 0 ]]; then
@@ -46,6 +47,7 @@ use_git=false
 pin_memory=true
 wandb_offline=false
 do_sweep=false
+use_deterministic_algorithms=false
 enable_wandb=true
 disable_ib=false
 disable_file_logging=false
@@ -93,6 +95,7 @@ while [[ "$#" -gt 0 ]]; do
         --enable_file_logging) disable_file_logging=false ;;
         --enable_profiling) enable_profiling=true ;;
         --multiprocessing_start_method_spawn) multiprocessing_start_method_spawn=true ;;
+        --use_deterministic_algorithms) use_deterministic_algorithms=true ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
     shift
@@ -205,6 +208,9 @@ if [[ "$enable_profiling" == true ]]; then
 fi
 if [[ "$multiprocessing_start_method_spawn" == true ]]; then
     common_options+=("--multiprocessing_start_method_spawn")
+fi
+if [[ "$use_deterministic_algorithms" == true ]]; then
+    common_options+=("--use_deterministic_algorithms")
 fi
 if [[ "$debug" == true ]]; then
     common_options+=("--enable_stack_trace_on_error" "--allow_non_master_node_printing")
