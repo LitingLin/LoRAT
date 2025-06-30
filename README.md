@@ -41,6 +41,10 @@ Update codebase:
 Update codebase:
 - Improve training reproducibility for future work.
 
+[June 30, 2025]
+Add SPMTrack. [https://github.com/WenRuiCai/SPMTrack](https://github.com/WenRuiCai/SPMTrack)
+
+
 ## Prerequisites
 ### Environment
 Assuming you have a working python environment with pip installed.

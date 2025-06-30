@@ -1,4 +1,4 @@
-def seed_all_rng(seed=0):
+def seed_all_rng(seed: int):
     import random
     random.seed(seed)
     import numpy as np

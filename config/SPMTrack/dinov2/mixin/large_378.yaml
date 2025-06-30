@@ -1,0 +1,7 @@
+!concat
+- !include "large.yaml"
+- !include "_378.yaml"
+- - path: "name"
+    value: "DINOv2/L-378"
+- - path: "run.data.train.global_batch_size"
+    value: 64

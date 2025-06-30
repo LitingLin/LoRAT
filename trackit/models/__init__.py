@@ -429,3 +429,23 @@ class ModelInputDataSelfDescriptionMixin_MultiPath:
 
     def get_data_path_names(self, with_train: bool = True, with_eval: bool = True) -> Sequence[str]:
         raise NotImplementedError()
+
+
+class ModelCacheSelfContainedMixin:
+    """This mixin indicates that the model contains its own cache, which is used for inference.
+    The cache is not shared with the inference engine, and the model is responsible for managing it."""
+
+    def allocate_cache(self,
+                       max_batch_size: int, # maximum batch size
+                       max_num_concurrent: int,  # maximum number of concurrent inference requests, usually max_batch_size * num_eval_workers
+                       total_num_tasks: int,  # total number of evaluation tasks, e.g. number of videos in evaluation
+                       dtype: torch.dtype,  # dtype of the data pipeline
+                       auto_mixed_precision_dtype: Optional[torch.dtype]):  # dtype for auto mixed precision, if applicable
+        """Allocate the cache for the model.
+        This method should be called before inference to allocate the cache."""
+        raise NotImplementedError()
+
+    def destroy_cache(self):
+        """Destroy the cache for the model.
+        This method should be called after inference to free the cache."""
+        raise NotImplementedError()

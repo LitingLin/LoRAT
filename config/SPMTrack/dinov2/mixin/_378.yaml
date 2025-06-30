@@ -1,0 +1,16 @@
+- path: "common.template_feat_size"
+  value: [ 14, 14 ]
+- path: "common.template_size"
+  value: [ 196, 196 ]
+- path:
+  - "common.response_map_size"
+  - "common.search_region_feat_size"
+  value: [ 27, 27 ]
+- path: "common.search_region_size"
+  value: [ 378, 378 ]
+- path:
+  - "run.data.train.transform.SiamFC_cropping.search_region.area_factor"
+  - "run.data.val.transform.SiamFC_cropping.search_region.area_factor"
+  value: 5.
+- path: "run.runner.test.evaluator.pipeline.search_region_cropping.area_factor"
+  value: 5.

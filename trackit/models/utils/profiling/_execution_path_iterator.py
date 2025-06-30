@@ -1,10 +1,12 @@
+from contextlib import contextmanager
 from typing import Any, Iterable, Optional
 from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
 from trackit.models import (ModelManager,
-                            ModelInputDataSelfDescriptionMixin, ModelInputDataSelfDescriptionMixin_MultiPath)
+                            ModelInputDataSelfDescriptionMixin, ModelInputDataSelfDescriptionMixin_MultiPath,
+                            ModelCacheSelfContainedMixin)
 
 from . import InferencePrecision
 
@@ -16,6 +18,19 @@ class ModelExecutionPath:
     model: nn.Module
     sample_input: Any
     auto_mixed_precision_dtype: Optional[torch.dtype]
+
+
+@contextmanager
+def _managed_model_cache(model: nn.Module, batch_size: int, dtype: torch.dtype, amp_dtype: Optional[torch.dtype]):
+    """A context manager to safely allocate and destroy the model cache."""
+    if isinstance(model, ModelCacheSelfContainedMixin):
+        model.allocate_cache(batch_size, batch_size, batch_size, dtype, amp_dtype)
+        try:
+            yield
+        finally:
+            model.destroy_cache()
+    else:
+        yield
 
 
 def iterate_model_execution_paths(model_manager: ModelManager, batch_size: int,
@@ -41,70 +56,80 @@ def iterate_model_execution_paths(model_manager: ModelManager, batch_size: int,
         'optimize_for_inference': True,
         'load_pretrained': False}
 
-    train_model = model_manager.create(device, **train_model_impl_suggestions)
-    if isinstance(train_model.model, ModelInputDataSelfDescriptionMixin):
-        if train_model.fingerprint_string != model_manager.get_fingerprint_string(device, **eval_model_impl_suggestions):
-            yield ModelExecutionPath(True, 'train', train_model.model.train(),
-                                     train_model.model.get_sample_data(batch_size, device,
-                                                                       train_mode_dtype,
-                                                                       train_mode_amp_dtype),
-                                     train_mode_amp_dtype)
-            del train_model
-            eval_model = model_manager.create(device, **eval_model_impl_suggestions)
-            assert isinstance(eval_model.model, (ModelInputDataSelfDescriptionMixin, ModelInputDataSelfDescriptionMixin_MultiPath))
-            if isinstance(eval_model.model, ModelInputDataSelfDescriptionMixin):
-                yield ModelExecutionPath(False, 'eval', eval_model.model.eval(),
-                                         eval_model.model.get_sample_data(batch_size, device,
-                                                                          eval_mode_dtype,
-                                                                          eval_mode_amp_dtype),
-                                         eval_mode_amp_dtype)
-            elif isinstance(eval_model.model, ModelInputDataSelfDescriptionMixin_MultiPath):
-                for path in eval_model.model.get_data_path_names(with_train=False, with_eval=True):
-                    yield ModelExecutionPath(False, '{path}-eval', eval_model.model,
-                                             eval_model.model.get_sample_data(path, batch_size,
-                                                                              device, eval_mode_dtype,
-                                                                              eval_mode_amp_dtype),
-                                             eval_mode_amp_dtype)
+    has_separate_eval_impl = (
+        model_manager.get_fingerprint_string(device, **train_model_impl_suggestions) !=
+        model_manager.get_fingerprint_string(device, **eval_model_impl_suggestions)
+    )
+
+
+    if has_separate_eval_impl:
+        # --- Training Paths ---
+        train_model_wrapper = model_manager.create(device, **train_model_impl_suggestions)
+        model = train_model_wrapper.model
+        with _managed_model_cache(model, batch_size, train_mode_dtype, train_mode_amp_dtype):
+            model.train()
+            if isinstance(model, ModelInputDataSelfDescriptionMixin_MultiPath):
+                for path in model.get_data_path_names(with_train=True, with_eval=False):
+                    yield ModelExecutionPath(
+                        is_train=True, path=f"{path}-train", model=model,
+                        sample_input=model.get_sample_data(path, batch_size, device, train_mode_dtype, train_mode_amp_dtype),
+                        auto_mixed_precision_dtype=train_mode_amp_dtype)
+            elif isinstance(model, ModelInputDataSelfDescriptionMixin):
+                yield ModelExecutionPath(
+                    is_train=True, path='train', model=model,
+                    sample_input=model.get_sample_data(batch_size, device, train_mode_dtype, train_mode_amp_dtype),
+                    auto_mixed_precision_dtype=train_mode_amp_dtype)
             else:
-                raise NotImplementedError
-        else:
-            yield ModelExecutionPath(False, '', train_model.model.eval(),
-                                     train_model.model.get_sample_data(batch_size, device,
-                                                                       eval_mode_dtype,
-                                                                       eval_mode_amp_dtype),
-                                     eval_mode_amp_dtype)
-    elif isinstance(train_model.model, ModelInputDataSelfDescriptionMixin_MultiPath):
-        train_paths = train_model.model.get_data_path_names(with_train=True, with_eval=False)
-        diff_implement = train_model.fingerprint_string != model_manager.get_fingerprint_string(device, **eval_model_impl_suggestions)
-        for train_path in train_paths:
-            yield ModelExecutionPath(True, train_path + '-train' if diff_implement else train_path,
-                                     train_model.model,
-                                     train_model.model.get_sample_data(train_path, batch_size, device,
-                                                                       train_mode_dtype,
-                                                                       train_mode_amp_dtype),
-                                     train_mode_amp_dtype)
-        if diff_implement:
-            del train_model
-            eval_model = model_manager.create(device, **eval_model_impl_suggestions)
-        else:
-            eval_model = train_model
-        if isinstance(eval_model.model, ModelInputDataSelfDescriptionMixin):
-            eval_paths = []
-        elif isinstance(eval_model.model, ModelInputDataSelfDescriptionMixin_MultiPath):
-            eval_paths = eval_model.model.get_data_path_names(with_train=False, with_eval=True)
-        else:
-            raise NotImplementedError
-        if len(eval_paths) > 0:
-            for eval_path in eval_paths:
-                yield ModelExecutionPath(False, eval_path + '-eval' if diff_implement else eval_path,
-                                         eval_model.model,
-                                         eval_model.model.get_sample_data(eval_path, batch_size, device,
-                                                                          eval_mode_dtype, eval_mode_amp_dtype),
-                                         eval_mode_amp_dtype)
-        else:
-            yield ModelExecutionPath(False, 'eval', eval_model.model.eval(),
-                                     eval_model.model.get_sample_data(batch_size, device,
-                                                                      eval_mode_dtype, eval_mode_amp_dtype),
-                                     eval_mode_amp_dtype)
+                raise NotImplementedError("model must implement ModelInputDataSelfDescriptionMixin or ModelInputDataSelfDescriptionMixin_MultiPath to support auto profiling")
+        del train_model_wrapper
+
+        # --- Evaluation Paths ---
+        eval_model_wrapper = model_manager.create(device, **eval_model_impl_suggestions)
+        model = eval_model_wrapper.model
+        with _managed_model_cache(model, batch_size, eval_mode_dtype, eval_mode_amp_dtype):
+            model.eval()
+            if isinstance(model, ModelInputDataSelfDescriptionMixin_MultiPath):
+                for path in model.get_data_path_names(with_train=False, with_eval=True):
+                    yield ModelExecutionPath(
+                        is_train=False, path=f"{path}-eval", model=model,
+                        sample_input=model.get_sample_data(path, batch_size, device, eval_mode_dtype, eval_mode_amp_dtype),
+                        auto_mixed_precision_dtype=eval_mode_amp_dtype)
+            elif isinstance(model, ModelInputDataSelfDescriptionMixin):
+                yield ModelExecutionPath(
+                    is_train=False, path='eval', model=model,
+                    sample_input=model.get_sample_data(batch_size, device, eval_mode_dtype, eval_mode_amp_dtype),
+                    auto_mixed_precision_dtype=eval_mode_amp_dtype)
+            else:
+                raise NotImplementedError("model must implement ModelInputDataSelfDescriptionMixin or ModelInputDataSelfDescriptionMixin_MultiPath to support auto profiling")
+
     else:
-        raise NotImplementedError
+        model_wrapper = model_manager.create(device, **train_model_impl_suggestions)
+        model = model_wrapper.model
+
+        if isinstance(model, ModelInputDataSelfDescriptionMixin_MultiPath):
+            with _managed_model_cache(model, batch_size, train_mode_dtype, train_mode_amp_dtype):
+                model.train()
+                for path in model.get_data_path_names(with_train=True, with_eval=False):
+                    yield ModelExecutionPath(
+                        is_train=True, path=path, model=model,
+                        sample_input=model.get_sample_data(path, batch_size, device, train_mode_dtype, train_mode_amp_dtype),
+                        auto_mixed_precision_dtype=train_mode_amp_dtype)
+
+            with _managed_model_cache(model, batch_size, eval_mode_dtype, eval_mode_amp_dtype):
+                model.eval()
+                for path in model.get_data_path_names(with_train=False, with_eval=True):
+                    yield ModelExecutionPath(
+                        is_train=False, path=path, model=model,
+                        sample_input=model.get_sample_data(path, batch_size, device, eval_mode_dtype, eval_mode_amp_dtype),
+                        auto_mixed_precision_dtype=eval_mode_amp_dtype)
+
+        elif isinstance(model, ModelInputDataSelfDescriptionMixin):
+            # Special case: for single-path, only yield the eval path.
+            with _managed_model_cache(model, batch_size, eval_mode_dtype, eval_mode_amp_dtype):
+                model.eval()
+                yield ModelExecutionPath(
+                    is_train=False, path='', model=model,
+                    sample_input=model.get_sample_data(batch_size, device, eval_mode_dtype, eval_mode_amp_dtype),
+                    auto_mixed_precision_dtype=eval_mode_amp_dtype)
+        else:
+            raise NotImplementedError("model must implement ModelInputDataSelfDescriptionMixin or ModelInputDataSelfDescriptionMixin_MultiPath to support auto profiling")

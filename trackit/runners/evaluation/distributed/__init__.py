@@ -1,11 +1,11 @@
-import gc
 from typing import Optional
 
 import torch
 import torch._C
+import gc
 
 from trackit.runners import Runner
-from trackit.models import ModelManager
+from trackit.models import ModelManager, ModelCacheSelfContainedMixin
 from trackit.models.compiling import InferenceEngine, OptimizedModel
 from trackit.data.protocol.eval_input import TrackerEvalData
 from trackit.data.context import get_current_data_context
@@ -33,6 +33,10 @@ class DefaultTrackerEvaluationRunner(Runner):
         num_workers = get_current_data_context().variables['num_workers']
 
         self.optimized_model = self.inference_engine(model_manager, self._device, data_context.dtype, max_batch_size, num_workers)
+        if isinstance(self.optimized_model.raw_model, ModelCacheSelfContainedMixin):
+            self.optimized_model.raw_model.allocate_cache(max_batch_size, max_batch_size * num_workers,
+                                                          get_current_data_context().variables['number_of_evaluation_tasks'],
+                                                          data_context.dtype, self.optimized_model.auto_mixed_precision_dtype)
         self.evaluator_context = EvaluatorContext(
             epoch=epoch,
             max_batch_size=max_batch_size,
@@ -53,6 +57,8 @@ class DefaultTrackerEvaluationRunner(Runner):
             for data_pipeline in data_pipeline_on_main_process:
                 data_pipeline.stop(epoch)
         self.tracker_evaluator.stop(self.evaluator_context)
+        if isinstance(self.optimized_model.raw_model, ModelCacheSelfContainedMixin):
+            self.optimized_model.raw_model.destroy_cache()
         self.optimized_model = None
         del self.evaluator_context
         gc.collect()

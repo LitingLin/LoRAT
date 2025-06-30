@@ -1,0 +1,11 @@
+- path: "run.task"
+  action: "retain"
+  value: "eval"
+- path: "run.data"
+  action: "retain"
+  value: "eval"
+- path: "run.runner"
+  action: "retain"
+  value: "test"
+- path: "run.num_epochs"
+  value: 1

@@ -5,6 +5,7 @@ import torch
 import gc
 from wandb.wandb_run import Run as WandbInstance
 
+from trackit.miscellanies.debugger import debugger_attached
 from trackit.models import ModelManager
 from trackit.models.utils.profiling import InferencePrecision
 from trackit.models.utils.profiling.latency import get_model_latency_for_all_paths
@@ -119,19 +120,20 @@ def run_model_profiling(model_manager: ModelManager, device: torch.device,
         # model latency
         wandb_report.update(_run_model_profiling_latency(model_manager, device,
                                                          inference_precision, train_inference_precision))
-
-        # model flops
-        try:
-            wandb_report.update(_run_model_profiling_flop_count(model_manager, device,
-                                                         inference_precision, train_inference_precision))
-        except NotImplementedError:
-            print('FLOPs profiling is not supported for this model. reason: model cannot be traced by torch.jit.trace')
-        except Exception:
-            print(f'FLOPs profiling is not supported for this model. reason: exception occurred.')
-            print(traceback.format_exc())
-    except Exception:
-        print('Profiling is not supported for this model. reason: exception occurred.')
+    except Exception as e:
+        print(f'Latency profiling is not supported for this model. {type(e).__name__}: {e}.')
         print(traceback.format_exc())
+        if debugger_attached():
+            raise
+    try:
+        # model flops
+        wandb_report.update(_run_model_profiling_flop_count(model_manager, device,
+                                                            inference_precision, train_inference_precision))
+    except Exception as e:
+        print(f'FLOPs profiling is not supported for this model. {type(e).__name__}: {e}.')
+        print(traceback.format_exc())
+        if debugger_attached():
+            raise
 
     if wandb_instance is not None:
         wandb_instance.summary.update(wandb_report)

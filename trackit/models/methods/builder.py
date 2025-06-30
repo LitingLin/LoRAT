@@ -12,6 +12,9 @@ def create_model_build_context(config: dict) -> ModelBuildContext:
     elif config['type'] == 'LoRAT-ablation':
         from .LoRAT.ablation.builder import create_LoRAT_build_context
         build_context = create_LoRAT_build_context(config)
+    elif config['type'] == 'SPMTrack':
+        from .SPMTrack.builder import create_SPMTrack_build_context
+        build_context = create_SPMTrack_build_context(config)
     else:
         raise NotImplementedError(config['type'])
     if isinstance(build_context, nn.Module):

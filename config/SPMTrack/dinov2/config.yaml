@@ -1,0 +1,41 @@
+name: "DINOv2/B-378"
+
+logging:
+  category: "SPMTrack"
+  tags:
+    - "DINOv2"
+    - "base"
+    - "378"
+    - "TMoE"
+
+type: "SPMTrack"
+
+common:
+  template_size: [ 196, 196 ]
+  search_region_size: [ 378, 378 ]
+  template_feat_size: [ 14, 14 ]
+  search_region_feat_size: &search_region_feat_size [ 27, 27 ]
+  response_map_size: *search_region_feat_size
+  template_feat_data_layout: "NLC"
+  interpolation_mode: "bilinear"
+  interpolation_align_corners: false
+  normalization: "imagenet"
+
+model:
+  type: "dinov2"
+  backbone:
+    type: "DINOv2"
+    parameters:
+      name: "ViT-B/14"
+      acc: "default"
+  tmoe:
+    r: 64
+    alpha: 64
+    dropout: 0.
+    use_rsexpert: false
+    shared_expert: false
+    route_compression: false
+    expert_nums: 4
+    init_method: bert
+
+run: !include "../run.yaml"

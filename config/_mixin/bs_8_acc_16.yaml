@@ -1,0 +1,6 @@
+- path:
+    - "run.data.train.global_batch_size"
+    - "run.data.val.global_batch_size"
+  value: 8
+- path: "run.runner.train.optimization.grad_accumulation_steps"
+  value: 16
