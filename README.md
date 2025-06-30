@@ -191,6 +191,11 @@ Our code performs evaluation automatically when model training is complete. You 
 The evaluated datasets are defined in ```config/_dataset/test.yaml```.
 
 Note that, as defined in ```config/LoRAT/run.yaml```, we evaluate LaSOT Extension dataset three times. The final performance is the average of the three evaluations.
+
+Results are saved in ```/path/to/output/run_id/eval/epoch_{last}/```, where `run_id` is the current run ID, and `epoch_{last}` is the last epoch.
+
+You can use the analysis scripts in pytracking derived codebase to re-calculate the metrics. [OSTrack](https://github.com/botaoye/OSTrack) is recommended. Recent SOT codebases have slightly different metrics implementations compared with earlier ones, e.g. this line in [Stack](https://github.com/researchmm/Stark/blob/162e1d37a38f92251cb380e90ccdb59608f2df3c/lib/test/analysis/extract_results.py#L77) v.s. [Pytracking](https://github.com/visionml/pytracking/blob/7eb9e74bd3d40e29dbcec444902237da13de247b/pytracking/analysis/extract_results.py#L78).
+
 #### TrackingNet evaluation
 Once the full evaluation is done, result files are saved in ```/path/to/output/run_id/eval/epoch_{last}/TrackingNet-test.zip```.
 
