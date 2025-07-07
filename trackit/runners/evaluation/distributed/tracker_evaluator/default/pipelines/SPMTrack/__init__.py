@@ -132,8 +132,8 @@ class SPMTrack_EvaluationPipeline(TrackingPipeline):
               result: TrackingPipeline_ResultHolder):
         num_tracking_sequence = 0
         task_ids = []
-        image_size_list = []
-        frame_indices = []
+        x_image_size_list = []
+        x_frame_indices = []
         for task in data.tasks:
             if task.tracker_do_tracking_context is not None:
                 track_context = task.tracker_do_tracking_context
@@ -142,7 +142,7 @@ class SPMTrack_EvaluationPipeline(TrackingPipeline):
                 cropping_params = cropping_params_provider.get(np.array(self.search_region_image_size))
                 x = track_context.input_data['image'].to(torch.float32)
                 H, W = x.shape[-2:]
-                image_size_list.append(np.array((W, H), dtype=np.int32))
+                x_image_size_list.append(np.array((W, H), dtype=np.int32))
                 _, _, cropping_params = \
                     apply_siamfc_cropping(x, np.array(self.search_region_image_size), cropping_params,
                                           self.interpolation_mode, self.interpolation_align_corners,
@@ -151,14 +151,15 @@ class SPMTrack_EvaluationPipeline(TrackingPipeline):
                 self.cropping_parameter_cache[num_tracking_sequence, ...] = cropping_params
                 num_tracking_sequence += 1
                 task_ids.append(task.id)
-                frame_indices.append(track_context.frame_index)
+                x_frame_indices.append(track_context.frame_index)
 
         model_input_params = {}
         if num_tracking_sequence > 0:
+            x_cropping_params = self.cropping_parameter_cache[: num_tracking_sequence, ...]
             context.temporary_objects['task_ids'] = task_ids
-            context.temporary_objects['x_frame_sizes'] = image_size_list
-            context.temporary_objects['x_frame_indices'] = frame_indices
-            context.temporary_objects['x_cropping_params'] = self.cropping_parameter_cache[: num_tracking_sequence, ...]
+            context.temporary_objects['x_frame_sizes'] = x_image_size_list
+            context.temporary_objects['x_frame_indices'] = x_frame_indices
+            context.temporary_objects['x_cropping_params'] = x_cropping_params
 
             z = self.all_tracking_template_cache.get_batch(task_ids)
             x = self.search_region_cache[: num_tracking_sequence, ...]
@@ -197,12 +198,9 @@ class SPMTrack_EvaluationPipeline(TrackingPipeline):
 
         model_outputs = model(model_input_params) if len(model_input_params) > 0 else None
 
-        if model_outputs is not None:
-            task_ids = context.temporary_objects['task_ids']
-            x_frame_sizes = context.temporary_objects['x_frame_sizes']
-            x_frame_indices = context.temporary_objects['x_frame_indices']
-            x_cropping_params = context.temporary_objects['x_cropping_params']
+        del model_input_params
 
+        if model_outputs is not None:
             outputs = self.model_output_post_process(model_outputs)
             # shape: (num_tracking_sequence), dtype: torch.float
             all_predicted_score = outputs['confidence']
@@ -232,14 +230,14 @@ class SPMTrack_EvaluationPipeline(TrackingPipeline):
             all_predicted_bounding_box_on_full_search_image = apply_siamfc_cropping_to_boxes(
                 all_predicted_bounding_box, reverse_siamfc_cropping_params(x_cropping_params))
             for predicted_bounding_box_on_full_search_image, image_size in zip(
-                    all_predicted_bounding_box_on_full_search_image, x_frame_sizes):
+                    all_predicted_bounding_box_on_full_search_image, x_image_size_list):
                 bbox_clip_to_image_boundary_(predicted_bounding_box_on_full_search_image, image_size)
 
             all_predicted_mask_on_full_search_image = None
             if all_predicted_mask is not None:
                 all_predicted_mask_on_full_search_image = []
                 for curr_mask, curr_image_size, curr_cropping_parameter in zip(
-                        all_predicted_mask, x_frame_sizes, x_cropping_params):
+                        all_predicted_mask, x_image_size_list, x_cropping_params):
                     mask_h, mask_w = curr_mask.shape
                     curr_cropping_parameter = scale_siamfc_cropping_params(curr_cropping_parameter,
                                                                            np.array(self.search_region_image_size),
@@ -264,7 +262,7 @@ class SPMTrack_EvaluationPipeline(TrackingPipeline):
             context.temporary_objects['memory_new_z_curated_norm'] = {}
             context.temporary_objects['memory_new_z_curated_bbox'] = {}
             context.temporary_objects['memory_new_z_curation_parameter'] = {}
-            for index, (task_id, image_size, frame_index) in enumerate(zip(task_ids, x_frame_sizes, x_frame_indices)):
+            for index, (task_id, image_size, frame_index) in enumerate(zip(task_ids, x_image_size_list, x_frame_indices)):
                 predicted_score = all_predicted_score[index].item()
                 predicted_bounding_box_on_full_search_image = all_predicted_bounding_box_on_full_search_image[index] # 推理的预测bbox
                 local_task_context = self.all_tracking_task_local_contexts[task_id]

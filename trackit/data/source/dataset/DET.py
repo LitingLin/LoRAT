@@ -140,7 +140,8 @@ class DETSequence(TrackingDataset_Sequence):
         return len(self._image)
 
     def __getitem__(self, index: int) -> TrackingDataset_Frame:
-        assert index == 0
+        if index != 0:
+            raise IndexError("DET dataset only supports a single frame per image.")
         return DETImage(self._image)
 
     def __len__(self) -> int:
