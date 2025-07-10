@@ -152,11 +152,12 @@ class DefaultTrainer(Runner):
 
             if not torch.isfinite(criterion_output.loss):
                 output_path = get_current_task_context().get_output_path()
+                metrics = get_loss_metrics(criterion_output)
                 if output_path is not None:
                     do_loss_nan_fault_dump(self._model, self._optimizer,
                                            self._lr_scheduler_per_iteration, self._lr_scheduler_per_epoch,
                                            self._parameter_updater,
-                                           data, model_output, get_loss_metrics(criterion_output),
+                                           data, model_output, metrics,
                                            output_path,
                                            self.task_name, self._epoch, self._iteration)
                 raise RuntimeError(f"Loss is {criterion_output.loss.item()}, stopping training\n{metrics}")

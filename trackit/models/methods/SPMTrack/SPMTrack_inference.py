@@ -59,6 +59,10 @@ class SPMTrack_Inference_DINOv2(nn.Module, ModelCacheSelfContainedMixin, ModelIn
     def destroy_cache(self):
         del self.track_query_dicts
 
+    # called SPMTrack_EvaluationPipeline in trackit.runners.evaluation.distributed.tracker_evaluator.default.pipelines.SPMTrack
+    def release_id(self, id_: int):
+        del self.track_query_dicts[id_]
+
     def forward(self, ids: List[int], z_0: torch.Tensor, x: torch.Tensor, z_0_feat_mask: torch.Tensor,
                          z_1: torch.Tensor = None, z_2: torch.Tensor = None, z_1_feat_mask: torch.Tensor = None, z_2_feat_mask: torch.Tensor = None):
         # 有bug

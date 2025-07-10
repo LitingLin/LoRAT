@@ -37,7 +37,7 @@ class DefaultTrackerEvaluator(TrackerEvaluator):
         del self.all_tracking_sequence_context
 
     def run(self, data: Optional[TrackerEvalData],
-                 optimized_model: Any, raw_model: Optional[nn.Module]) -> Optional[Mapping[str, Any]]:
+                 optimized_model: Any, raw_model: nn.Module) -> Optional[Mapping[str, Any]]:
         if data is None:
             return None
 
@@ -66,7 +66,7 @@ class DefaultTrackerEvaluator(TrackerEvaluator):
                 track_context.prediction_begin_time.append(init_begin_time)
                 num_init_tracks += 1
 
-        self.pipeline.initialize(data, optimized_model, current_tracking_context)
+        self.pipeline.initialize(data, optimized_model, current_tracking_context, raw_model)
         # on initialized
         init_end_time = time.perf_counter()
         for task in data.tasks:
@@ -103,7 +103,7 @@ class DefaultTrackerEvaluator(TrackerEvaluator):
 
         tracking_results = TrackingPipeline_ResultHolder(tracking_id_list)
 
-        self.pipeline.track(data, optimized_model, current_tracking_context, tracking_results)
+        self.pipeline.track(data, optimized_model, current_tracking_context, tracking_results, raw_model)
         tracking_end_time = time.perf_counter()
 
         evaluated_frames = []

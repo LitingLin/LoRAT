@@ -1,6 +1,7 @@
 from typing import Dict, Tuple, Callable, Any, Optional, List, Sequence
 import numpy as np
 import torch
+import torch.nn as nn
 from dataclasses import dataclass, field
 from trackit.core.operator.numpy.bbox.utility.image import bbox_clip_to_image_boundary_
 from trackit.core.utils.siamfc_cropping import apply_siamfc_cropping, apply_siamfc_cropping_to_boxes, \
@@ -86,7 +87,7 @@ class SPMTrack_EvaluationPipeline(TrackingPipeline):
         del self.all_tracking_task_local_contexts
         del self.memory_frames
 
-    def initialize(self, data: TrackerEvalData, model, context: TrackerEvaluationPipeline_Context):
+    def initialize(self, data: TrackerEvalData, model, context: TrackerEvaluationPipeline_Context, raw_model: nn.Module):
         for task in data.tasks:
             if task.task_creation_context is not None:
                 assert task.id not in self.all_tracking_task_local_contexts
@@ -129,7 +130,7 @@ class SPMTrack_EvaluationPipeline(TrackingPipeline):
         return list(indexes)
 
     def track(self, data: TrackerEvalData, model, context: TrackerEvaluationPipeline_Context,
-              result: TrackingPipeline_ResultHolder):
+              result: TrackingPipeline_ResultHolder, raw_model: nn.Module):
         num_tracking_sequence = 0
         task_ids = []
         x_image_size_list = []
@@ -314,3 +315,5 @@ class SPMTrack_EvaluationPipeline(TrackingPipeline):
                 self.all_tracking_template_cache.delete(task.id)
                 self.all_tracking_template_image_mean_cache.delete(task.id)
                 self.all_tracking_task_local_contexts.pop(task.id)
+                raw_model.release_id(task.id)
+                del self.memory_frames[task.id]

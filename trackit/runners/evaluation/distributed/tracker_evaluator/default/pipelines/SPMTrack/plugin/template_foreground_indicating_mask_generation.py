@@ -112,3 +112,4 @@ class TemplateFeatForegroundMaskGeneration(TrackingPipelinePlugin):
         for task in data.tasks:
             if task.do_task_finalization:
                 self.template_mask_cache.delete(task.id)
+                del self.memory_masks[task.id]
