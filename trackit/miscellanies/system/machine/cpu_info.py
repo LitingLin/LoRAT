@@ -13,11 +13,27 @@ is_x86 = platform.machine() in ("i386", "AMD64", "x86_64")
 is_arm = platform.machine().startswith('arm')
 
 
+def get_cpu_name_from_registry():
+    try:
+        import winreg
+        reg_key_path = r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
+
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_key_path)
+
+        cpu_name, _ = winreg.QueryValueEx(key, "ProcessorNameString")
+
+        winreg.CloseKey(key)
+
+        return cpu_name.strip()
+    except FileNotFoundError:
+        return "CPU name not found in registry."
+    except Exception as e:
+        return f"Error accessing registry: {e}"
+
 @lru_cache(maxsize=None)
 def get_processor_name() -> str:
     if get_os_running_on() == OperatingSystem.Windows:
-        name = subprocess.check_output(["wmic", "cpu", "get", "name"], universal_newlines=True).strip().split("\n")[-1]
-        return name
+        return get_cpu_name_from_registry()
     elif get_os_running_on() == OperatingSystem.macOS:
         command = ["/usr/sbin/sysctl", "-n", "machdep.cpu.brand_string"]
         return subprocess.check_output(command, universal_newlines=True).strip()

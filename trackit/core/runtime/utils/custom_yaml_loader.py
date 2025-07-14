@@ -3,7 +3,10 @@ import itertools
 from typing import Mapping
 from functools import partial
 import yaml
-from yaml import CSafeLoader as Loader
+try:
+    from yaml import CSafeLoader as Loader
+except ImportError:
+    from yaml import SafeLoader as Loader
 
 
 class CustomLoader(Loader):

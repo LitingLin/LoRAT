@@ -37,7 +37,10 @@ def indent_format(string, indent_level: int = 0):
 
 def pretty_format(object_, indent_level=0):
     import yaml
-    from yaml import CSafeDumper
+    try:
+        from yaml import CSafeDumper as Dumper
+    except ImportError:
+        from yaml import SafeDumper as Dumper
 
-    string = yaml.dump(object_, Dumper=CSafeDumper, indent=2, default_flow_style=False, allow_unicode=True, sort_keys=False).strip()
+    string = yaml.dump(object_, Dumper=Dumper, indent=2, default_flow_style=False, allow_unicode=True, sort_keys=False).strip()
     return indent_format(string, indent_level)
