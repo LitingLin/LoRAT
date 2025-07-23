@@ -44,6 +44,10 @@ Update codebase:
 [June 30, 2025]
 Add SPMTrack. [https://github.com/WenRuiCai/SPMTrack](https://github.com/WenRuiCai/SPMTrack)
 
+[July 24, 2025]
+Update codebase:
+- Add fault-tolerant distributed training with torchrun.
+- Better resumable checkpointing.
 
 ## Prerequisites
 ### Environment
@@ -258,13 +262,13 @@ checkpoint:
     resumable: true # false --> true
     max_to_keep: 5
 ```
+Now the training process will save checkpoints every 10 epochs, and the last checkpoint will be saved as `recovery.yaml` in the `checkpoint` directory.
 
 Load the last checkpoint by specifying the `--resume` argument and the `--wegiht_path` argument:
 
 ```shell
-./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin resumable --weight_path /path/to/output/run_id/checkpoint/epoch_{last}/model.safetensors --resume /path/to/output/run_id/checkpoint/epoch_{last}/state.tar
+./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin resumable --resume /path/to/output/run_id/checkpoint/recovery.yaml
 ```
-Note that the `--weight_path` argument is required to load the model weights, while the `--resume` argument is used to load the training state.
 ## Citation
 ```bibtex
 @inproceedings{lorat,

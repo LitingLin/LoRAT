@@ -107,6 +107,7 @@ def init_torch_distributed(device: str, use_aux_process_group: bool = True):
     if dist_backend != 'nccl':
         kwargs['timeout'] = timedelta(days=1)
     else:
+        kwargs['timeout'] = timedelta(seconds=60) # reduce nccl backend timeout to 1 minutes
         pytorch_version = tuple(int(v) for v in torch.__version__.split(".")[:2])
         if pytorch_version >= (2, 3):
             kwargs['device_id'] = torch.device('cuda:{}'.format(local_rank))

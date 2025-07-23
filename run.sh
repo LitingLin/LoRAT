@@ -5,7 +5,7 @@ print_help() {
     echo
     echo "Options:"
     echo "  -h, --help                 Show this help message and exit"
-    echo "  --resume <path>            Resume from checkpoint"
+    echo "  --resume <path>            Resume from recovery file"
     echo "  --no_pin_memory            Disable pin memory"
     echo "  --pin_memory               Enable pin memory (default)"
     echo "  --device_ids <ids>         Specify GPU device IDs"
@@ -21,6 +21,7 @@ print_help() {
     echo "  --run_id <id>              Specify run ID"
     echo "  --branch <branch>          Specify git branch"
     echo "  --mixin <config>           Add mixin config"
+    echo "  --max_restarts <num>       Maximum number of restarts for torchrun (only for distributed training)"
     echo "  --nnodes <num>             Number of nodes for distributed training"
     echo "  --instance <id>            Instance ID"
     echo "  --node_rank <rank>         Node rank for distributed training"
@@ -47,6 +48,7 @@ use_git=false
 pin_memory=true
 wandb_offline=false
 do_sweep=false
+max_restarts=0
 use_deterministic_algorithms=false
 enable_wandb=true
 disable_ib=false
@@ -87,6 +89,7 @@ while [[ "$#" -gt 0 ]]; do
         --node_rank) NODE_RANK=$2; shift ;;
         --master_address) MASTER_ADDRESS="$2"; shift ;;
         --seed) seed=$2; shift ;;
+        --max_restarts) max_restarts=$2; shift ;;
         --disable_ib) disable_ib=true ;;
         --enable_ib) disable_ib=false ;;
         --weight_path) weight_paths+=("$2"); shift ;;
@@ -211,6 +214,9 @@ if [[ "$multiprocessing_start_method_spawn" == true ]]; then
 fi
 if [[ "$use_deterministic_algorithms" == true ]]; then
     common_options+=("--use_deterministic_algorithms")
+fi
+if [[ "$max_restarts" -gt 0 ]]; then
+    common_options+=("--torchrun_max_restarts" "$max_restarts")
 fi
 if [[ "$debug" == true ]]; then
     common_options+=("--enable_stack_trace_on_error" "--allow_non_master_node_printing")

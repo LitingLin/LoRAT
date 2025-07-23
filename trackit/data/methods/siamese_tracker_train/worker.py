@@ -174,7 +174,7 @@ class SiameseTrackerTrainingDataCollator:
         else:
             batch = data
             io_wait = None
-        collated = TrainData()
+        collated = TrainData(len(batch))
         self.transform_data_collator(batch, collated)
         if io_wait is not None:
             collated.miscellanies['io_wait'] = io_wait

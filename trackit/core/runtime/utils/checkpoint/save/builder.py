@@ -52,4 +52,4 @@ def build_checkpoint_dumper(checkpoint_dumper_config: Sequence[Mapping], output_
             epoch_based_dumpers.append(LatestCheckpointDumper(output_path, resumable, exclude_frozen_parameters))
         else:
             raise NotImplementedError(f"Unknown checkpoint dumper type: {sub_dumper_config['type']}")
-    return CheckpointDumper(epoch_based_dumpers, step_based_dumpers, metric_based_dumpers)
+    return CheckpointDumper(output_path, epoch_based_dumpers, step_based_dumpers, metric_based_dumpers)

@@ -58,5 +58,6 @@ def setup_wandb(args, network_config: dict, notes: str, extra_tags: list = None)
             run_id = run_id[:wandb_id_max_length - len(datetime_str) - 1] + '-' + datetime_str
             print(f'warning(wandb): id is too long, shorten to {run_id}')
 
-    wandb_instance = wandb.init(project=project, tags=tags, config=config, force=True, job_type='train', id=run_id, mode=mode, dir=output_dir, group=group, notes=notes)
+    wandb_instance = wandb.init(project=project, tags=tags, config=config, force=True, job_type='train', id=run_id,
+                                mode=mode, dir=output_dir, group=group, notes=notes, resume='auto')
     return wandb_instance

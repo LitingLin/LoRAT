@@ -22,6 +22,7 @@ from trackit.data import MainProcessDataPipeline
 from trackit.runners.builder import build_runner
 from trackit.runners.context import RunnerContext
 from trackit.miscellanies.torch.distributed import is_dist_initialized, is_rank_0_process
+from trackit.core.runtime.utils.checkpoint.recovery import has_recovery_file, read_recovery_file, get_recovery_file_path
 from ..profiling.builder import build_model_profiler
 
 
@@ -114,8 +115,22 @@ def build_default_application(config: dict, runtime_vars,
     if runtime_vars.output_dir is not None and 'checkpoint' in config['run']:
         checkpoint_output_path = os.path.join(runtime_vars.output_dir, 'checkpoint')
         if is_rank_0_process():
-            os.makedirs(checkpoint_output_path)
+            os.makedirs(checkpoint_output_path, exist_ok=True)
         checkpoint_dumper = build_checkpoint_dumper(config['run']['checkpoint'], checkpoint_output_path, num_epochs)
+        if runtime_vars.resume is None:
+            if has_recovery_file(checkpoint_output_path):
+                resume_file_path = get_recovery_file_path(checkpoint_output_path)
+                print(f'recovery file found in checkpoint, will resume from {resume_file_path}')
+                runtime_vars.resume = resume_file_path
+
+    if runtime_vars.resume is not None:
+        model_state_file_path, application_state_file_path = read_recovery_file(runtime_vars.resume)
+        print('resume: load model state from', model_state_file_path, flush=True)
+        print('resume: load application state from', application_state_file_path, flush=True)
+        if runtime_vars.weight_path is None:
+            runtime_vars.weight_path = []
+        runtime_vars.weight_path.append(model_state_file_path)
+        runtime_vars.state_path = application_state_file_path
 
     # build task description
     context_manager = GlobalContextManager()
@@ -202,4 +217,4 @@ def build_default_application(config: dict, runtime_vars,
     logger.info('Application context is built, ready to run')
 
     return DefaultApplication(name, model_manager, context_manager, application_context,
-                              checkpoint_dumper, runtime_vars.weight_path, runtime_vars.resume)
+                              checkpoint_dumper, runtime_vars.weight_path, runtime_vars.state_path)

@@ -2,12 +2,13 @@ from typing import Tuple, Any
 import numpy as np
 import torch
 
-from trackit.core.utils.bbox_mask_gen import get_foreground_bounding_box
 from trackit.core.operator.numpy.bbox.validity import bbox_is_valid
+from trackit.core.operator.numpy.bbox.utility.image import bbox_clip_to_image_boundary_
 from trackit.data.protocol.eval_input import TrackerEvalData
 from trackit.runners.evaluation.distributed import EvaluatorContext
 from trackit.runners.evaluation.distributed.tracker_evaluator.components.tensor_cache import CacheService, TensorCache
 from trackit.runners.evaluation.distributed.tracker_evaluator.default.types import TrackerEvaluationPipeline_Context
+from ...utils.bbox_mask_gen import get_foreground_bounding_box
 from . import TrackingPipelinePlugin
 import functools
 
@@ -39,6 +40,7 @@ class TemplateFeatForegroundMaskGeneration(TrackingPipelinePlugin):
                 current_init_context = task.tracker_do_init_context
                 template_mask = torch.full((self.template_feat_size[1], self.template_feat_size[0]), self.background_value, dtype=torch.long)
                 template_cropped_bbox = get_foreground_bounding_box(current_init_context.gt_bbox, current_init_context.input_data['curation_parameter'], self.stride)
+                bbox_clip_to_image_boundary_(template_cropped_bbox, np.array(self.template_feat_size))
                 assert bbox_is_valid(template_cropped_bbox)
                 template_cropped_bbox = torch.from_numpy(template_cropped_bbox)
                 template_mask[template_cropped_bbox[1]: template_cropped_bbox[3], template_cropped_bbox[0]: template_cropped_bbox[2]] = self.foreground_value
@@ -104,6 +106,7 @@ class TemplateFeatForegroundMaskGeneration(TrackingPipelinePlugin):
                 curation_parameter = context.temporary_objects['memory_new_z_curation_parameter'][task_id]
                 template_mask = torch.full((self.template_feat_size[1], self.template_feat_size[0]), self.background_value, dtype=torch.long)
                 template_cropped_bbox = get_foreground_bounding_box(bbox, curation_parameter, self.stride)
+                bbox_clip_to_image_boundary_(template_cropped_bbox, np.array(self.template_feat_size))
                 assert bbox_is_valid(template_cropped_bbox)
                 template_cropped_bbox = torch.from_numpy(template_cropped_bbox)
                 template_mask[template_cropped_bbox[1]: template_cropped_bbox[3], template_cropped_bbox[0]: template_cropped_bbox[2]] = self.foreground_value

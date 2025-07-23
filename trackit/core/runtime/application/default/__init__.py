@@ -35,10 +35,6 @@ def run_task(model_manager: ModelManager,
     task_name = task_context.context.name
     is_train = task_context.context.is_train
     runner = runner_context.runner
-    if data_context.batch_size is not None:
-        batch_size = data_context.batch_size * get_world_size()
-    else:
-        batch_size = 1
 
     local_metric_logger = task_context.local_metric_logger
     metric_logger = task_context.metric_logger
@@ -68,7 +64,7 @@ def run_task(model_manager: ModelManager,
 
             metric_logger.commit()
             if is_train:
-                global_step_counter.update(batch_size)
+                global_step_counter.update(_get_batch_size(data, data_context))
             garbage_collection.run()
 
         garbage_collection.end()
@@ -121,11 +117,13 @@ class DefaultApplication:
             print(f'loaded state from {self._application_state_file}', flush=True)
 
         epoch_metrics_holder = EpochMetrics()
-        checkpoint_dumper = ApplicationCheckpointDumper(self._checkpoint_dumper, self._model_manager, self._all_context.state_dict,
+        checkpoint_dumper = ApplicationCheckpointDumper(self._checkpoint_dumper,
+                                                        self._all_context.iteration,
+                                                        self._model_manager,
+                                                        self._all_context.state_dict,
                                                         epoch_metrics_holder)
         epoch_iterator = self._all_context.epoch
         global_step_counter = self._all_context.iteration
-        checkpoint_dumper.initialize(epoch_iterator.current_epoch, global_step_counter.get_iteration())
         enable_epoch_metrics(epoch_metrics_holder)
         emit_start_event(_get_all_event_listener_registries(self._all_context))
         has_train_task = any(task.context.is_train for task in self._all_context.tasks.values())
@@ -148,3 +146,12 @@ class DefaultApplication:
         finally:
             emit_stop_event(reversed(_get_all_event_listener_registries(self._all_context)))
             disable_epoch_metrics()
+
+
+def _get_batch_size(data, data_context: ApplicationDataContext) -> int:
+    from trackit.data.protocol.train_input import TrainData
+    if isinstance(data, TrainData):
+        return data.batch_size * get_world_size() # assume that batch size is the same for all processes
+    if data_context.batch_size is not None:
+        return data_context.batch_size * get_world_size()
+    return 1

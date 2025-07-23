@@ -8,6 +8,7 @@ from trackit.miscellanies.slugify import slugify
 from trackit.miscellanies.torch.distributed import is_rank_0_process
 from .scheduling import EpochOrStepSelector
 from .. import model_state_save_fn, application_state_save_fn
+from ..recovery import write_recovery_file
 
 @dataclass
 class _DumpedFilePaths:
@@ -130,7 +131,14 @@ class RegularCheckpointDumper(_CheckpointDumper):
 
         if self._max_to_keep > 0:
             self._saved_epochs_or_steps.add(epoch_or_step)
-            if len(self._saved_epochs_or_steps) > self._max_to_keep:
+            remove_old = False
+            this_epoch_has_model_state = model_state_saver is not None or dumped_file_paths.model_state_path is not None
+            this_epoch_has_app_state = application_state_getter is not None or len(dumped_file_paths.app_state_file_paths) > 0
+            this_epoch_state_has_saved = this_epoch_has_model_state and (not self._resumable or this_epoch_has_app_state)
+            if this_epoch_state_has_saved:
+                if len(self._saved_epochs_or_steps) > self._max_to_keep:
+                    remove_old = True
+            if remove_old:
                 epoch_to_remove = min(self._saved_epochs_or_steps)
                 folder_to_remove = os.path.join(self._output_path, self._get_folder_name(epoch_to_remove))
                 if is_rank_0_process():
@@ -250,9 +258,11 @@ class LatestCheckpointDumper(_CheckpointDumper):
 
 
 class CheckpointDumper:
-    def __init__(self, epoch_based_checkpoint_dumpers: Sequence[_CheckpointDumper],
+    def __init__(self, output_path: str,
+                 epoch_based_checkpoint_dumpers: Sequence[_CheckpointDumper],
                  step_based_checkpoint_dumpers: Sequence[_CheckpointDumper],
                  metric_based_checkpoint_dumpers: Sequence[_CheckpointDumper_MetricAware]):
+        self._output_path = output_path
         self._epoch_based_checkpoint_dumpers = epoch_based_checkpoint_dumpers
         self._step_based_checkpoint_dumpers = step_based_checkpoint_dumpers
         self._metric_based_checkpoint_dumpers = metric_based_checkpoint_dumpers
@@ -283,6 +293,12 @@ class CheckpointDumper:
             self._model_weight_output_paths_dedup_cache[model_weight_version] = saved_file_paths.model_state_output_folder_paths
         if len(saved_file_paths.app_state_file_paths) > 0:
             self._app_state_dedup_cache[epoch] = saved_file_paths.app_state_file_paths
+        if self._model_weight_file_path_cache.get(model_weight_version) is not None and self._app_state_dedup_cache.get(epoch) is not None:
+            if is_rank_0_process():
+                recovery_file_path = write_recovery_file(self._output_path,
+                                                         self._model_weight_file_path_cache[model_weight_version],
+                                                         self._app_state_dedup_cache[epoch][-1])
+                print(f'checkpoint: recovery -> {recovery_file_path}', flush=True)
 
     def dump_step_based(self, step: int, is_last: bool, model_weight_version: int,
                         model_state_saver: Optional[model_state_save_fn]):

@@ -170,7 +170,7 @@ class SPMTrackTrackerTrainingDataCollator:
 
     def __call__(self, data):
         batch, io_wait = data
-        collated = TrainData()
+        collated = TrainData(len(batch))
         self.transform_data_collator(batch, collated)
         if io_wait is not None:
             collated.miscellanies['io_wait'] = io_wait

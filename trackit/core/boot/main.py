@@ -1,5 +1,8 @@
 import os
 
+from trackit.miscellanies.torch.distributed import is_dist_initialized
+from trackit.miscellanies.system.operating_system import get_os_running_on, OperatingSystem
+
 from .funcs.utils.debugging import enable_stack_trace_on_error, enable_rich_logging, enable_strict_numeric_error_handling
 from .funcs.utils.disable_multithreading import disable_multithreading
 from .funcs.main.load_config import load_config
@@ -12,6 +15,7 @@ def _remove_ddp_parameter(args):
     del args.distributed_nnodes
     del args.distributed_nproc_per_node
     del args.distributed_do_spawn_workers
+    del args.torchrun_max_restarts
 
 
 def main(runtime_vars):
@@ -67,6 +71,15 @@ def main(runtime_vars):
 
     context = init_global_context(runtime_vars, config)
 
+    if is_dist_initialized() and get_os_running_on() == OperatingSystem.Linux:
+        from torch.distributed.elastic.multiprocessing.errors import record
+        run_main = record(_run_main)
+    else:
+        run_main = _run_main
+    run_main(runtime_vars, config, context)
+
+
+def _run_main(runtime_vars, config, context):
     with context:
         if runtime_vars.do_sweep:
             from .funcs.sweep import prepare_sweep
