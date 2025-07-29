@@ -24,7 +24,7 @@ def build_siamese_tracker_eval_data_pipeline(data_config: dict, build_context: B
         datasets, data_config['sampler'], data_config['batch_size'],
         num_workers if num_workers > 0 else 1, build_context)
 
-    data_processor = build_data_transform(data_config['transform'], config, dtype)
+    data_processor = build_data_transform(data_config['transform'], config, dtype=dtype)
 
     worker = SiameseTrackEvaluationDataInputWorker(datasets, sampler, data_processor, num_io_threads)
     data_loader = build_dataloader(worker, batch_size=None,

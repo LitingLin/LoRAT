@@ -1,8 +1,9 @@
-from typing import Optional, Sequence
-from tqdm import tqdm
+import gc
 import sys
 import logging
-import gc
+from typing import Optional, Sequence
+
+from tqdm import tqdm
 
 from trackit.miscellanies.torch.distributed import get_world_size
 from trackit.miscellanies.torch.distributed.barrier import torch_distributed_barrier
@@ -142,6 +143,12 @@ class DefaultApplication:
                         run_task(self._model_manager, task_context, data_context, runner_context, epoch, global_step_counter, checkpoint_dumper)
                         self._context_manager.finalize()
                         checkpoint_dumper.dump_model_state()
+                        # Explicitly trigger garbage collection after completing a task.
+                        # REASON: To prevent a common and hard-to-debug CUDA error. If this task left
+                        # uncollected CUDA tensors, and the next task's DataLoader forks new worker
+                        # processes, those workers could try to garbage-collect the old tensors.
+                        # This fails because forked processes do not properly inherit the CUDA context,
+                        # leading to a crash. This line ensures all cleanup happens here, in the main process
                         gc.collect()
         finally:
             emit_stop_event(reversed(_get_all_event_listener_registries(self._all_context)))

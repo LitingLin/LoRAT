@@ -1,5 +1,4 @@
 import torch
-import gc
 from typing import Protocol, MutableSequence, Any, Iterable
 
 from trackit.miscellanies.torch.nested_tensor_helper import extract_torch_tensor_list_from_object, rebuild_object_with_given_torch_tensor_list
