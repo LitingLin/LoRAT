@@ -259,9 +259,8 @@ class ModelManager:
         self._fingerprint_generator = model_building_context.fingerprint_fn
         self._model_instance_cache = WeakValueDictionary()
         self._version: int = 0
-        self._latest_model_state = ModelState()
         self._states_to_be_load: List[Callable[[nn.Module, torch.device], None]] = []
-        self._prefer_safetensors = get_global_constant('use_safetensors', default=True)
+        self._latest_model_state = ModelState(_prefer_safetensors=get_global_constant('use_safetensors', default=True))
 
     def get_fingerprint_string(self, device: torch.device, dtype: torch.dtype = torch.float32,
                                torch_jit_trace_compatible: bool = False,

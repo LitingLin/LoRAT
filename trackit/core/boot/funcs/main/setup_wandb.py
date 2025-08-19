@@ -8,6 +8,9 @@ from trackit.miscellanies.torch.distributed import is_dist_initialized, get_rank
 
 
 def setup_wandb(args, network_config: dict, notes: str, extra_tags: list = None):
+    from packaging.version import Version
+    if Version('0.18') <= Version(wandb.__version__) < Version('0.21'):
+        wandb.require("legacy-service")
     tags = None
     if extra_tags is not None:
         tags = copy.deepcopy(extra_tags)
