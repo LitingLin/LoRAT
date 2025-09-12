@@ -1,0 +1,4 @@
+!combine
+__base__: !include "../B-224/config.yaml"
+__mixin__:
+  - !include "../_mixin/giant_224.yaml"

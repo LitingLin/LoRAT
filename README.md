@@ -49,6 +49,11 @@ Update codebase:
 - Add fault-tolerant distributed training with torchrun.
 - Better resumable checkpointing.
 
+[September 12, 2025]
+Update codebase:
+- Add extra VOT stacks support (vot2020/shortterm & vot2022/shorttermbox), see trackit.core.third_party.supported_stacks.
+- For better clarity, yaml loader is enhanced with !combine tag, now you can run ```./run.sh LoRAT L-224``` instead of ```./run.sh LoRAT dinov2 --mixin large```.
+
 ## Prerequisites
 ### Environment
 Assuming you have a working python environment with pip installed.
@@ -153,32 +158,32 @@ Note: Our code performs evaluation automatically when model training is complete
 ### Using run.sh helper script (Linux with NVIDIA GPU only)
 ```shell
 # Train and evaluate LoRAT-B-224 model on all GPUs
-./run.sh LoRAT dinov2 --output_dir /path/to/output
+./run.sh LoRAT B-224 --output_dir /path/to/output
 # Train and evaluate LoRAT-L-224 model on all GPUs
-./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin large
+./run.sh LoRAT L-224 --output_dir /path/to/output
 # Train and evaluate LoRAT-g-378 model on all GPUs
-./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin giant_378
+./run.sh LoRAT g-378 --output_dir /path/to/output
 # Train and evaluate LoRAT-L-224 model following GOT-10k protocol on all GPUs
-./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin large --mixin got10k
+./run.sh LoRAT L-224 --output_dir /path/to/output --mixin got10k
 # Train and evaluate on specific GPUs
-./run.sh LoRAT dinov2 --output_dir /path/to/output --device_ids 0,1,2,3
+./run.sh LoRAT B-224 --output_dir /path/to/output --device_ids 0,1,2,3
 # Train and evaluate on multiple nodes
-./run.sh LoRAT dinov2 --output_dir /path/to/output --nnodes $num_nodes --node_rank $node_rank --master_address $master_node_ip --date 2024.03.07-04.59.08-976343
+./run.sh LoRAT B-224 --output_dir /path/to/output --nnodes $num_nodes --node_rank $node_rank --master_address $master_node_ip --date 2024.03.07-04.59.08-976343
 ```
 You can set the default settings, e.g. `output_dir`, in ```run.sh```.
 ### Call main.py directly
 ```shell
 # Train and evaluate LoRAT-B-224 model on single GPU
-python main.py LoRAT dinov2 --output_dir /path/to/output
+python main.py LoRAT B-224 --output_dir /path/to/output
 
 # Train and evaluate LoRAT-B-224 model on CPU
-python main.py LoRAT dinov2 --output_dir /path/to/output --device cpu
+python main.py LoRAT B-224 --output_dir /path/to/output --device cpu
 
 # Train and evaluate LoRAT-B-224 model on all GPUs
-python main.py LoRAT dinov2 --distributed_nproc_per_node $num_gpus --distributed_do_spawn_workers --output_dir /path/to/output
+python main.py LoRAT B-224 --distributed_nproc_per_node $num_gpus --distributed_do_spawn_workers --output_dir /path/to/output
 
 # Train and evaluate LoRAT-B-224 model on multiple nodes, run_id need to be set manually
-python main.py LoRAT dinov2 --master_address $master_address --distributed_node_rank $node_rank distributed_nnodes $num_nodes --distributed_nproc_per_node $num_gpus --distributed_do_spawn_workers --output_dir /path/to/output --run_id $run_id
+python main.py LoRAT B-224 --master_address $master_address --distributed_node_rank $node_rank distributed_nnodes $num_nodes --distributed_nproc_per_node $num_gpus --distributed_do_spawn_workers --output_dir /path/to/output --run_id $run_id
 ```
 See ```python main.py --help``` for more options.
 
@@ -190,7 +195,7 @@ Note: You can disable wandb logging with ```--disable_wandb```.
 Our code performs evaluation automatically when model training is complete. You can run evaluation only with the following command:
 ```shell
 # evaluation only, on all datasets, defined in config/_dataset/test.yaml
-./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin evaluation --weight_path /path/to/weight.bin
+./run.sh LoRAT B-224 --output_dir /path/to/output --mixin evaluation --weight_path /path/to/weight.bin
 ```
 The evaluated datasets are defined in ```config/_dataset/test.yaml```.
 
@@ -208,14 +213,14 @@ Submit this file to the [TrackingNet evaluation server](https://tracking-net.org
 ### Train and evaluate with GOT-10k dataset
 ```shell
 # Train and evaluate LoRAT-B-224 model following GOT-10k protocol on all GPUs
-./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin got10k
+./run.sh LoRAT B-224 --output_dir /path/to/output --mixin got10k
 ```
 Submit ```/path/to/output/run_id/eval/epoch_{last}/GOT10k-test.zip``` to the [GOT-10k evaluation server](http://got-10k.aitestunion.com/) to get the result of GOT-10k test split.
 
 Evaluation only:
 ```shell
 # evaluation only, on GOT-10k dataset
-./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin got10k --mixin evaluation --weight_path /path/to/weight.bin
+./run.sh LoRAT B-224 --output_dir /path/to/output --mixin got10k --mixin evaluation --weight_path /path/to/weight.bin
 ```
 
 Note that, as defined in ```config/LoRAT/_mixin/got10k.yaml```, we evaluate GOT-10k dataset three times.
@@ -239,7 +244,7 @@ VOT_TESTS_MULTIOBJECT_PATH: '/path/to/vot_tests_workspace/sequences'
 ### Run VOT experiments
 ```shell
 # Run VOT experiment (vots2024/main stack) on LoRAT-g-378 with SAM-H segmentation model
-python vot_main.py vots2024/main LoRAT dinov2 /path/to/output --mixin giant_378 --mixin segmentify_sam_h --tracker_name LoRAT  --weight_path /path/to/lorat_model_weight.bin
+python vot_main.py vots2024/main LoRAT g-378 /path/to/output --mixin segmentify_sam_h --tracker_name LoRAT  --weight_path /path/to/lorat_model_weight.bin
 ```
 
 ## Custom Dataset
@@ -249,7 +254,7 @@ python vot_main.py vots2024/main LoRAT dinov2 /path/to/output --mixin giant_378 
 Add ```--mixin resumable``` to the command line to enable resumable checkpointing. This allows you to resume training from the last saved checkpoint if the training process is interrupted.
 
 ```shell
-./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin resumable
+./run.sh LoRAT B-224 --output_dir /path/to/output --mixin resumable
 ```
 
 Or you can set the default value in ```run.yaml``` to:
@@ -264,10 +269,10 @@ checkpoint:
 ```
 Now the training process will save checkpoints every 10 epochs, and the last checkpoint will be saved as `recovery.yaml` in the `checkpoint` directory.
 
-Load the last checkpoint by specifying the `--resume` argument and the `--wegiht_path` argument:
+Load the last checkpoint by specifying the `--resume` argument:
 
 ```shell
-./run.sh LoRAT dinov2 --output_dir /path/to/output --mixin resumable --resume /path/to/output/run_id/checkpoint/recovery.yaml
+./run.sh LoRAT B-224 --output_dir /path/to/output --mixin resumable --resume /path/to/output/run_id/checkpoint/recovery.yaml
 ```
 ## Citation
 ```bibtex

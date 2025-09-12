@@ -10,7 +10,7 @@ from trackit.miscellanies.system.operating_system import get_os_running_on, Oper
 
 is_64bits = sys.maxsize > 2**32
 is_x86 = platform.machine() in ("i386", "AMD64", "x86_64")
-is_arm = platform.machine().startswith('arm')
+is_arm = platform.machine().startswith('arm') or platform.machine().startswith('aarch')
 
 
 def get_cpu_name_from_registry():

@@ -21,4 +21,4 @@ class MainProcessDataPipeline:
 @dataclass(frozen=True)
 class DataPipeline:
     input: Iterable[Any]
-    on_main_process: Optional[Sequence[MainProcessDataPipeline]]
+    on_main_process: Optional[Sequence[MainProcessDataPipeline]] = None

@@ -3,10 +3,10 @@ from typing import Iterable, Sequence, Union, Any, List
 
 
 class TensorCache:
-    def __init__(self, max_cache_length: int, dims: Sequence[int], device: torch.device,
+    def __init__(self, capacity: int, item_shape: Iterable[int], device: torch.device,
                  dtype: torch.dtype = torch.float):
-        assert max_cache_length > 0
-        self.shape = (max_cache_length, *dims)
+        assert capacity > 0
+        self.shape = (capacity, *item_shape)
         self.cache = torch.empty(self.shape, dtype=dtype, device=device)
 
     def put(self, index: int, tensor: torch.Tensor):
@@ -38,10 +38,10 @@ class TensorCache:
 
 
 class MultiTensorCache:
-    def __init__(self, max_num_elements: int, dims_list: Sequence[Sequence[int]], device: torch.device,
+    def __init__(self, capacity: int, item_shapes: Iterable[Iterable[int]], device: torch.device,
                  dtype: torch.dtype = torch.float):
-        assert max_num_elements > 0
-        self.shape_list = tuple((max_num_elements, *dims) for dims in dims_list)
+        assert capacity > 0
+        self.shape_list = tuple((capacity, *dims) for dims in item_shapes)
         self.cache_list = tuple(torch.empty(shape, dtype=dtype, device=device) for shape in self.shape_list)
 
     def put(self, index: int, tensors: Sequence[torch.Tensor]):
@@ -78,7 +78,7 @@ class MultiTensorCache:
 
 
 class TensorCache_ZeroCopy:
-    def __init__(self, max_cache_length: int, dims: Sequence[int], device: torch.device,
+    def __init__(self, max_cache_length: int, dims: Iterable[int], device: torch.device,
                  dtype: torch.dtype = torch.float):
         occupied_bytes = dtype.itemsize * max_cache_length
         for dim in dims:
@@ -112,7 +112,7 @@ class TensorCache_ZeroCopy:
 
 
 class MultiTensorCache_ZeroCopy:
-    def __init__(self, max_num_elements: int, dims_list: Sequence[Sequence[int]],
+    def __init__(self, max_num_elements: int, dims_list: Iterable[Iterable[int]],
                  dtype: torch.dtype = torch.float):
         base_bytes = dtype.itemsize * max_num_elements
         occupied_bytes = 0
@@ -205,9 +205,11 @@ class IndexAllocator:
     def has(self, id_):
         return id_ in self.id_to_index
 
-    def allocate(self, id_):
+    def allocate(self, id_, exists_ok=True):
         # Return existing index if id is already allocated
         if id_ in self.id_to_index:
+            if not exists_ok:
+                raise ValueError(f"ID {id_} already exists")
             return self.id_to_index[id_]
         # Allocate a new index if available
         if not self.free_indices:

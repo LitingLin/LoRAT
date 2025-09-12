@@ -7,7 +7,7 @@ from trackit.miscellanies.versioning import get_app_version_string
 from trackit.miscellanies.torch.distributed import is_dist_initialized, get_rank, get_local_rank, get_local_world_size
 
 
-def setup_wandb(args, network_config: dict, notes: str, extra_tags: list = None):
+def setup_wandb(args, network_config: dict, notes: str, extra_tags: list | None = None):
     from packaging.version import Version
     if Version('0.18') <= Version(wandb.__version__) < Version('0.21'):
         wandb.require("legacy-service")
