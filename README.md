@@ -51,7 +51,7 @@ Update codebase:
 
 [September 12, 2025]
 Update codebase:
-- Add extra VOT stacks support (vot2020/shortterm & vot2022/shorttermbox), see trackit.core.third_party.supported_stacks.
+- Add extra VOT stacks support (vot2020/shortterm & vot2022/shorttermbox), see trackit.core.third_party.vot.supported_stacks.
 - For better clarity, yaml loader is enhanced with !combine tag, now you can run ```./run.sh LoRAT L-224``` instead of ```./run.sh LoRAT dinov2 --mixin large```.
 
 ## Prerequisites
@@ -246,6 +246,10 @@ VOT_TESTS_MULTIOBJECT_PATH: '/path/to/vot_tests_workspace/sequences'
 # Run VOT experiment (vots2024/main stack) on LoRAT-g-378 with SAM-H segmentation model
 python vot_main.py vots2024/main LoRAT g-378 /path/to/output --mixin segmentify_sam_h --tracker_name LoRAT  --weight_path /path/to/lorat_model_weight.bin
 ```
+
+By default, vot_main.py will automatically attach ```vot.yaml```. VOT toolkit related data pipeline is defined in this file.
+
+If you encounter problems, you can enable file logging with ```--enable_file_logging``` switch.
 
 ## Custom Dataset
 [This page](DATASET.md) describes how to create a custom dataset for training and evaluation.
