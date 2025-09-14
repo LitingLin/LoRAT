@@ -43,5 +43,9 @@ def launch_vot_analysis(workspace_path: str):
     _run_vot_command(workspace_path, ['analyze'])
 
 
+def launch_vot_report(workspace_path: str):
+    _run_vot_command(workspace_path, ['report'])
+
+
 def launch_vot_pack(workspace_path: str, name: str):
     _run_vot_command(workspace_path, ['pack', name])

@@ -395,7 +395,8 @@ def _load_state_dict_from_file(model: nn.Module, state_file: str, device: torch.
     if state_file.endswith(('.safetensors', '.bin')):
         if isinstance(device, torch.device):
             device = str(device)
-        missing, unexpected = safetensors.torch.load_model(model, state_file, strict=strict, device=device)
+        state_dict = safetensors.torch.load_file(state_file, device=device)
+        missing, unexpected = model.load_state_dict(state_dict, strict=strict)
     else:
         if is_torch_version_greater_or_equal((1, 13)):
             state_dict = torch.load(state_file, map_location=device, weights_only=True)

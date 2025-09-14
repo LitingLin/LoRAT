@@ -2,7 +2,7 @@ import os.path
 import sys
 from subprocess import list2cmdline
 from trackit.core.third_party.vot.prepare_workspace import prepare_vot_workspace
-from trackit.core.third_party.vot.vot_launcher import launch_vot_evaluation, launch_vot_analysis, launch_vot_pack
+from trackit.core.third_party.vot.vot_launcher import launch_vot_evaluation, launch_vot_analysis, launch_vot_report, launch_vot_pack
 
 
 def vot_main(args):
@@ -10,6 +10,7 @@ def vot_main(args):
         from trackit.core.boot.funcs.utils.run_id import generate_run_id
         args.run_id = generate_run_id(args, ('vot',))
     args.output_path = os.path.join(args.output_path, args.run_id)
+    print('output directory: ', args.output_path)
     vot_workspace = os.path.join(args.output_path, 'vot_workspace')
 
     if args.tracker_name is None:
@@ -42,6 +43,10 @@ def vot_main(args):
     print('===================== Begin VOT analysis =====================', flush=True)
     launch_vot_analysis(vot_workspace)
     print('===================== End VOT analysis =====================', flush=True)
+
+    print('===================== Begin VOT report =====================', flush=True)
+    launch_vot_report(vot_workspace)
+    print('===================== End VOT report =====================', flush=True)
 
     print('===================== Begin VOT packing =====================', flush=True)
     launch_vot_pack(vot_workspace, args.tracker_name)

@@ -54,6 +54,8 @@ class SiameseTrackerEvaluation_VOTToolkitIntegrator(torch.utils.data.dataset.Ite
 
         batch = []
 
+        if not self._vot._multiobject:
+            assert len(self._vot.objects()) == 1
         for index_of_object in range(len(self._vot.objects())):
             sequence_info = None
             init_context = None
@@ -100,6 +102,8 @@ class SiameseTrackerEvaluation_VOTToolkitIntegrator(torch.utils.data.dataset.Ite
         evaluated_frames = output_data['evaluated_frames']
         if len(evaluated_frames) == 0:
             assert self._exhausted, "Only if the data is exhausted the output can be empty."
+            return output_data
+
         outputs = []
         for evaluated_frame in evaluated_frames:
             assert isinstance(evaluated_frame, FrameEvaluationResult_SOT)
@@ -113,7 +117,11 @@ class SiameseTrackerEvaluation_VOTToolkitIntegrator(torch.utils.data.dataset.Ite
                 box = self.ours_box_format_to_vot(evaluated_frame.output_box.tolist())
                 outputs.append(Rectangle(*box))
 
-        self._vot.report(outputs)
+        if self._vot._multiobject:
+            self._vot.report(outputs)
+        else:
+            assert len(evaluated_frames) == 1
+            self._vot.report(outputs[0], evaluated_frames[0].output_confidence)
         return output_data
 
 
