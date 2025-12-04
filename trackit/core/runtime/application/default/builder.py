@@ -60,7 +60,7 @@ def _build_batch_collective_communication(task_config: dict):
             raise NotImplementedError(f'Unknown batch collective communication type: {batch_collective_communication_type}')
 
 
-def _build_garbage_collection(task_config: dict):
+def _build_garbage_collection_manager(task_config: dict):
     from trackit.core.runtime.services.garbage_collection import GarbageCollection
     if 'garbage_collection' in task_config:
         garbage_collection_config = task_config['garbage_collection']
@@ -81,7 +81,7 @@ def _build_task(task_name: str, task_config: dict, output_path: Optional[str], b
     assert isinstance(local_metric_logger, LocalMetricLoggerWrapper)
 
     batch_collective_communication = _build_batch_collective_communication(task_config)
-    garbage_collection = _build_garbage_collection(task_config)
+    garbage_collection = _build_garbage_collection_manager(task_config)
 
     context = TaskContext(task_name, is_train,
                           output_path, data_name, runner_name, epoch_selector,
@@ -214,7 +214,19 @@ def build_default_application(config: dict, runtime_vars,
     iteration_counter = GlobalIterationCounter()
     application_context = ApplicationContext(data_inputs, runners, tasks, epoch_counter, iteration_counter)
 
+    # build early stopping manager
+    early_stopping_manager = None
+    if 'early_stopping' in config['run']:
+        from .early_stopping import EarlyStoppingManager
+        early_stopping_config = config['run']['early_stopping']
+        metric_name = early_stopping_config['metric']
+        mode = early_stopping_config.get('mode', 'min')
+        patience = early_stopping_config['patience']
+        early_stopping_manager = EarlyStoppingManager(metric_name, mode, patience)
+        print(f'Early stopping is enabled. metric: {metric_name}, mode: {mode}, patience: {patience}')
+
     logger.info('Application context is built, ready to run')
 
     return DefaultApplication(name, model_manager, context_manager, application_context,
-                              checkpoint_dumper, runtime_vars.weight_path, runtime_vars.state_path)
+                              checkpoint_dumper, early_stopping_manager,
+                              runtime_vars.weight_path, runtime_vars.state_path)

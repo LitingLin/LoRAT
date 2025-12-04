@@ -16,7 +16,10 @@ def setup_arg_parser():
                        help='Path(s) to model weights (multiple weights can be assigned, load in order)')
     parser.add_argument('--state_path', help='Path to state file (state.tar) for resuming application state')
     parser.add_argument('--resume', help='Path to recovery file (recovery.yaml) containing path to model weight and application state (for resuming training)')
-    parser.add_argument('--mixin_config', type=str, action='append', help='Additional configuration files to mix in (multiple mixin configs is allowed, applied in sequential order)')
+    parser.add_argument('--mixin_config', type=str, action='append',
+                        help='Additional configuration files to mix in (multiple mixin configs is allowed, applied in sequential order),'
+                             'searching in order of config/{method_name}/{config_name}/mixin/, config/{method_name}/_mixin, '
+                             'config/_mixin.')
 
     parser.add_argument('--pin_memory', action='store_true', help='Move tensors to pinned memory before transferring to GPU (improves performance but uses more CPU memory)')
 
@@ -55,7 +58,7 @@ def setup_arg_parser():
     parser.add_argument('--multiprocessing_start_method_spawn', action='store_true',
                        help='Use spawn start method for the multiprocessing package (default is fork, which may cause issues with some libraries)')
     parser.add_argument('--enable_profiling', action='store_true',
-                       help='Enable performance profiling during execution (may impact performance)')
+                       help='Enable performance profiling (cProfile) during execution (may impact performance)')
 
     parser.add_argument('--use_deterministic_algorithms', action='store_true',
                        help='Use deterministic algorithms for reproducible results (may reduce performance)')

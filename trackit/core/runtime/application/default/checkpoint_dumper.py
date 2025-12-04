@@ -23,23 +23,24 @@ class ApplicationCheckpointDumper:
                 yield epoch
                 print('Output path is not set. Skip checkpoint saving.')
             return
-        total_epochs = len(epoch_iterator)
-        self._total_epochs = total_epochs
+        self._cached_epoch_iterator = epoch_iterator
         for epoch in epoch_iterator:
-            self._epoch = epoch
-            self._is_last_epoch = epoch == total_epochs - 1
+            self._current_epoch = epoch
             yield epoch
 
-            self._checkpoint_dumper.dump(epoch, self._is_last_epoch,
+            is_last_epoch = epoch == len(epoch_iterator) - 1
+            self._checkpoint_dumper.dump(epoch, is_last_epoch,
                                          self._epoch_metric_holder.get(epoch - 1),
                                          self._model_manager.version,
                                          self._model_manager.save,
                                          self._application_state_getter)
+            del self._current_epoch
+        del self._cached_epoch_iterator
 
     def dump_model_state(self):
         if self._checkpoint_dumper is None:
             return
-        self._checkpoint_dumper.dump(self._epoch, self._is_last_epoch,
+        self._checkpoint_dumper.dump(self._current_epoch, self._current_epoch == len(self._cached_epoch_iterator) - 1,
                                      None, self._model_manager.version,
                                      self._model_manager.save,
                                      None)
@@ -53,7 +54,7 @@ class ApplicationCheckpointDumper:
             total_iterations = len(data_loader)
             for index, obj in enumerate(data_loader):
                 yield obj
-                is_last = index == total_iterations - 1 and self._is_last_epoch
+                is_last = index == total_iterations - 1 and self._current_epoch == len(self._cached_epoch_iterator) - 1
                 self._checkpoint_dumper.dump_step_based(self._global_step_getter.get_iteration(), is_last,
                                                         self._model_manager.version,
                                                         self._model_manager.save)
@@ -66,6 +67,6 @@ class ApplicationCheckpointDumper:
                                                             self._model_manager.save)
                 yield obj
                 global_step = self._global_step_getter.get_iteration()
-            self._checkpoint_dumper.dump_step_based(global_step, self._is_last_epoch,
+            self._checkpoint_dumper.dump_step_based(global_step, self._current_epoch == len(self._cached_epoch_iterator) - 1,
                                                     self._model_manager.version,
                                                     self._model_manager.save)

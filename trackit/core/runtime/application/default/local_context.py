@@ -33,6 +33,9 @@ class EpochIterator:
             self.current_epoch += 1
             return current_epoch
 
+    def set_total_epochs(self, total_epochs: int):
+        self.epochs = total_epochs
+
     def get_state(self):
         return self.current_epoch
 

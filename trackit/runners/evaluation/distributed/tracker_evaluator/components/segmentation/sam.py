@@ -59,13 +59,14 @@ class SAM_BoxToMaskPostProcess(MaskGenerator):
 
     def stop(self):
         del self._sam
+        del self._dtype
         del self._pixel_mean
         del self._pixel_std
         gc.collect()
 
     def __call__(self, search_region: torch.Tensor, predicted_bbox: torch.Tensor) -> List[torch.Tensor]:
         assert search_region.dim() == 4, 'search_region must have in shape (N, C, H, W)'
-        assert predicted_bbox.ndim == 2, 'predicted_bbox must have 2 dimensions'
+        assert predicted_bbox.ndim == 2, 'predicted_bbox must have in shape (N, 4)'
         # note that search region must be in original (0 - 255) RGB format, not normalized
         h, w = search_region.shape[-2:]
 

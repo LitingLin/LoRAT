@@ -13,6 +13,7 @@ from trackit.core.runtime.metric_logger import enable_metric_logger
 from trackit.core.runtime.utils.checkpoint.save import CheckpointDumper
 from trackit.core.runtime.utils.checkpoint.load import load_application_state
 from trackit.core.runtime.metric_logger.epoch_metric import enable_epoch_metrics, disable_epoch_metrics, EpochMetrics
+from .early_stopping import EarlyStoppingManager
 from .global_context_manager import GlobalContextManager
 from .local_context import ApplicationTaskContext, ApplicationDataContext, ApplicationRunnerContext, GlobalIterationCounter, EpochIterator, ApplicationContext
 from .checkpoint_dumper import ApplicationCheckpointDumper
@@ -96,6 +97,7 @@ class DefaultApplication:
                  context_manager: GlobalContextManager,
                  all_contexts: ApplicationContext,
                  checkpoint_dumper: Optional[CheckpointDumper],
+                 early_stopping_manager: Optional[EarlyStoppingManager],
                  model_weight_file: Optional[Sequence[str]] = None,
                  application_state_file: Optional[str] = None):
         self._model_name = model_name
@@ -103,6 +105,7 @@ class DefaultApplication:
         self._context_manager = context_manager
         self._all_context = all_contexts
         self._checkpoint_dumper = checkpoint_dumper
+        self._early_stopping_manager = early_stopping_manager
         self._model_weight_file = model_weight_file
         self._application_state_file = application_state_file
 
@@ -128,6 +131,7 @@ class DefaultApplication:
         enable_epoch_metrics(epoch_metrics_holder)
         emit_start_event(_get_all_event_listener_registries(self._all_context))
         has_train_task = any(task.context.is_train for task in self._all_context.tasks.values())
+        early_stopped = False
         try:
             for epoch in checkpoint_dumper.dump_every_epoch(
                     tqdm(epoch_iterator, desc=f'Train {self._model_name}' if has_train_task else f'Eval {self._model_name}',
@@ -150,6 +154,10 @@ class DefaultApplication:
                         # This fails because forked processes do not properly inherit the CUDA context,
                         # leading to a crash. This line ensures all cleanup happens here, in the main process
                         gc.collect()
+                        if self._early_stopping_manager is not None and not early_stopped:
+                            early_stopped = self._early_stopping_manager.should_stop(epoch_metrics_holder.get(epoch), epoch)
+                            if early_stopped:
+                                epoch_iterator.set_total_epochs(epoch + 1)
         finally:
             emit_stop_event(reversed(_get_all_event_listener_registries(self._all_context)))
             disable_epoch_metrics()

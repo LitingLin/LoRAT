@@ -43,7 +43,7 @@ class LocalMetricLoggerWrapper(MetricLoggerInterface):
         if len(summary) > 0:
             epoch_metrics = get_current_epoch_metrics()
             if epoch_metrics is not None:
-                epoch_metrics.update(epoch=epoch, metrics=self.summary)
+                epoch_metrics.update(epoch=epoch, metrics=summary)
             print(f'{self.epoch_header} summary metrics:\n' + tabulate(summary.items(), headers=('metric', 'value'), floatfmt=".4f"), flush=True)
         self.reset()
         self.epoch_header = None

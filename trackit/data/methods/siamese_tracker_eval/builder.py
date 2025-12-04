@@ -70,10 +70,13 @@ def build_siamese_tracker_eval_vot_integrated_data_pipeline(data_config: dict, b
         vot_region_format = trax.Region.RECTANGLE
     else:
         raise ValueError(f"Invalid VOT region format: {vot_region_format}, expected 'rectangle' or 'mask'")
-    vot = VOT(vot_region_format, multiobject=data_config.get('multiobject_mode', True))
+    multiobject_mode = data_config.get('multiobject_mode', True)
+    vot = VOT(vot_region_format, multiobject=multiobject_mode)
     integrator = SiameseTrackerEvaluation_VOTToolkitIntegrator(vot, vot_region_format, transform)
+    number_of_objects = len(vot.objects())
 
     build_context.variables['num_workers'] = 1
-    build_context.variables['batch_size'] = len(vot.objects())
+    build_context.variables['batch_size'] = number_of_objects
 
+    print('vot data pipeline: vot_region_format: ', vot_region_format, ', multiobject_mode: ', multiobject_mode, ', number_of_objects: ', number_of_objects)
     return DataPipeline(integrator, (integrator,))
