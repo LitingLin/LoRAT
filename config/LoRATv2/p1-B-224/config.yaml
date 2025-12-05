@@ -1,0 +1,43 @@
+name: "LoRATv2-p1/B-224"
+
+logging:
+  category: "LoRATv2"
+  tags:
+    - "DINOv2"
+    - "base"
+    - "224"
+    - "LoRA"
+    - "phase_1"
+
+type: "LoRATv2"
+
+common:
+  templates:
+    - size: [ 224, 224 ]
+      area_factor: 2.
+  search_regions:
+    - size: [ 224, 224 ]
+      area_factor: 4.
+  model_stride: 14
+  interpolation_mode: "bilinear"
+  interpolation_align_corners: false
+  normalization: "imagenet"
+
+model:
+  backbone:
+    type: "timm"
+    parameters:
+      model_name: "vit_base_patch14_reg4_dinov2.lvd142m"
+  with_cls_token: false
+  with_reg_token: true
+
+  stream_specific_LoRA:
+    trainable_bits: [ true, true ]
+    lora:
+      r: 64
+      alpha: 64
+      dropout: 0.
+
+  enable_flash_attn: true
+
+run: !include "run.yaml"

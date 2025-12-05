@@ -1,0 +1,12 @@
+- path: "logging.tags"
+  action: "remove_by_value"
+  value: "base"
+- path: "logging.tags"
+  action: "append"
+  value: "large"
+- path: "model.backbone.parameters.model_name"
+  value: "vit_large_patch14_reg4_dinov2.lvd142m"
+- path: "model.backbone.parameters"
+  action: "merge"
+  value:
+    drop_path_rate: 0.1

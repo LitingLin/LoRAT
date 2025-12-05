@@ -1,0 +1,26 @@
+- path: "logging.tags"
+  action: "remove_by_value"
+  value: "phase_1"
+- path: "logging.tags"
+  action: "append"
+  value: "phase_2"
+- path: "common.search_regions"
+  action: "append"
+  value:
+    size: [ 378, 378 ]
+    area_factor: 5.
+- path: "model.stream_specific_LoRA.trainable_bits"
+  value: [ false, false, true ]
+- path: "run.runner.test.evaluator.pipeline.phase"
+  value: 2
+- path:
+    - "run.data.train.temporal_sampling.adaptor.type"
+    - "run.data.val.temporal_sampling.adaptor.type"
+  value: "increased_difficulty"
+- path: "run.runner.train.optimization.optimizer.per_parameter"
+  value:
+    - type: "zero_1d_param_weight_decay"
+- path: "run.runner.test.evaluator.pipeline"
+  action: "merge"
+  value:
+    dynamic_reference_frame_update_threshold: 0.9

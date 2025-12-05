@@ -54,6 +54,10 @@ Update codebase:
 - Add extra VOT stacks support (vot2020/shortterm & vot2022/shorttermbox), see trackit.core.third_party.vot.supported_stacks.
 - For better clarity, yaml loader is enhanced with !combine tag, now you can run ```./run.sh LoRAT L-224``` instead of ```./run.sh LoRAT dinov2 --mixin large```.
 
+[December 5, 2025]
+Update codebase:
+- Add LoRATv2 (NeurIPS 2025 Spotlight) [link](https://neurips.cc/virtual/2025/loc/san-diego/poster/115907)
+
 ## Prerequisites
 ### Environment
 Assuming you have a working python environment with pip installed.

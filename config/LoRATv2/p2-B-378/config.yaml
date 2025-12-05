@@ -1,0 +1,6 @@
+!combine
+__base__: !include "../p1-B-224/config.yaml"
+__mixin__:
+  - !include "../_mixin/phase_2.yaml"
+  - - path: "name"
+      value: "LoRATv2-p2/B-378"

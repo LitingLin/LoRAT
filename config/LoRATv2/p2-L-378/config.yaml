@@ -1,0 +1,9 @@
+!combine
+__base__: !include "../p1-B-224/config.yaml"
+__mixin__:
+  - !include "../_mixin/large.yaml"
+  - !include "../_mixin/phase_2.yaml"
+  - - path: "name"
+      value: "LoRATv2-p2/L-378"
+    - path: "run.runner.test.evaluator.pipeline.post_process.window_penalty"
+      value: 0.4

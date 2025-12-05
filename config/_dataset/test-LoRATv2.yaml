@@ -1,0 +1,21 @@
+filters:
+  - type: "data_cleaning.annotation_standard"
+    parameters:
+      bounding_box_format: "XYXY"
+      bounding_box_coordinate_system: "Continuous"
+
+datasets:
+  - name: "LaSOT"
+    type: "SOT"
+    splits:
+      - "test"
+
+  - name: "TNL2K"
+    type: "SOT"
+    splits:
+      - "test"
+
+  - name: "VastTrack"
+    type: "SOT"
+    splits:
+      - "test"

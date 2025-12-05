@@ -1,0 +1,6 @@
+!combine
+__base__: !include "../p1-B-224/config.yaml"
+__mixin__:
+  - !include "../_mixin/large.yaml"
+  - - path: "name"
+      value: "LoRATv2-p1/L-224"

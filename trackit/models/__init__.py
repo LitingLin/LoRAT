@@ -449,3 +449,8 @@ class ModelCacheSelfContainedMixin:
         """Destroy the cache for the model.
         This method should be called after inference to free the cache."""
         raise NotImplementedError()
+
+
+class ModelKVCacheSelfDescriptionMixin:
+    def get_kv_cache_shapes(self, batch_size: int) -> Sequence[Sequence[int]]:
+        raise NotImplementedError()

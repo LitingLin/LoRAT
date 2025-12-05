@@ -13,5 +13,11 @@ def build_post_process(post_process_config: dict, common_config: dict, device: t
         search_region_size = common_config['search_region_size']
         window_penalty_ratio = post_process_config['window_penalty']
         return PostProcessing_BoxWithScoreMap(device, response_map_size, search_region_size, window_penalty_ratio)
+    elif post_process_type == 'LoRATv2':
+        from .box_with_score_map import PostProcessing_BoxWithScoreMap
+        search_region_size = common_config['search_regions'][-1]['size']
+        response_map_size = search_region_size[0] // common_config['model_stride'], search_region_size[1] // common_config['model_stride']
+        window_penalty_ratio = post_process_config['window_penalty']
+        return PostProcessing_BoxWithScoreMap(device, response_map_size, search_region_size, window_penalty_ratio)
     else:
         raise NotImplementedError("Unknown post process type: {}".format(post_process_type))
