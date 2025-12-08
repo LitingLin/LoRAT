@@ -63,6 +63,9 @@ def setup_arg_parser():
     parser.add_argument('--use_deterministic_algorithms', action='store_true',
                        help='Use deterministic algorithms for reproducible results (may reduce performance)')
 
+    parser.add_argument('--use_deterministic_algorithms_warn_only', action='store_true',
+                       help='Try to use deterministic algorithms, but showing a warning instead of throwing a RuntimeError if deterministic algorithms are unavailable.')
+
     return parser
 
 

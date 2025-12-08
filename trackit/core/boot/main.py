@@ -50,9 +50,9 @@ def main(runtime_vars):
         from .funcs.main.torch_distributed_do_spawn_workers import spawn_workers
         return spawn_workers(runtime_vars)
 
-    if runtime_vars.use_deterministic_algorithms:
+    if runtime_vars.use_deterministic_algorithms or runtime_vars.use_deterministic_algorithms_warn_only:
         import torch
-        torch.use_deterministic_algorithms(True, warn_only=True)
+        torch.use_deterministic_algorithms(True, warn_only=runtime_vars.use_deterministic_algorithms_warn_only)
         print("torch: Using deterministic algorithms.")
 
     enable_strict_numeric_error_handling()
