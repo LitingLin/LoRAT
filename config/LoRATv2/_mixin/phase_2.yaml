@@ -4,6 +4,12 @@
 - path: "logging.tags"
   action: "append"
   value: "phase_2"
+- path: "logging.tags"
+  action: "remove_by_value"
+  value: "224"
+- path: "logging.tags"
+  action: "append"
+  value: "378"
 - path: "common.search_regions"
   action: "append"
   value:
