@@ -23,26 +23,32 @@ def _build_backbone(backbone_config: dict, load_pretrained=True, torch_jit_trace
         from huggingface_hub.utils import enable_progress_bars
         enable_progress_bars()
         if get_global_constant('TIMM_USE_OLD_CACHE', default=True):
+            import huggingface_hub
             from huggingface_hub.errors import LocalEntryNotFoundError, OfflineModeIsEnabled
             import huggingface_hub.constants
-            import huggingface_hub.utils._http
+            from packaging.version import Version
+            if Version(huggingface_hub.__version__).major >= 1:
+                hf_hub_http_reset_sessions = lambda : None
+            else:
+                import huggingface_hub.utils._http
+                hf_hub_http_reset_sessions = huggingface_hub.utils._http.reset_sessions()
             old_hf_hub_offline = huggingface_hub.constants.HF_HUB_OFFLINE
             if not old_hf_hub_offline:
                 huggingface_hub.constants.HF_HUB_OFFLINE = True
-                huggingface_hub.utils._http.reset_sessions()
+                hf_hub_http_reset_sessions()
             import timm
             try:
                 with torch.device(device), set_default_dtype(dtype):
                     backbone = timm.create_model(pretrained=load_pretrained, **backbone_build_params)
             except (LocalEntryNotFoundError, OfflineModeIsEnabled):
                 huggingface_hub.constants.HF_HUB_OFFLINE = False
-                huggingface_hub.utils._http.reset_sessions()
+                hf_hub_http_reset_sessions()
                 with torch.device(device), set_default_dtype(dtype):
                     backbone = timm.create_model(pretrained=load_pretrained, **backbone_build_params)
             finally:
                 if old_hf_hub_offline != huggingface_hub.constants.HF_HUB_OFFLINE:
                     huggingface_hub.constants.HF_HUB_OFFLINE = old_hf_hub_offline
-                    huggingface_hub.utils._http.reset_sessions()
+                    hf_hub_http_reset_sessions()
         else:
             import timm
             with torch.device(device), set_default_dtype(dtype):

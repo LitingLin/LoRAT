@@ -290,10 +290,10 @@ def build_qkv_linear_layer_replica_with_lora_adapter(qkv_linear: nn.Linear,
     modules = []
     hooker = Hooker(lora_alpha)
     for i in range(num_replica):
-        replica = copy.deepcopy(qkv_linear)
         if lora_enable_bits[i]:
             replica = LinearWithLoRA_QKVFused(qkv_linear, lora_rank, lora_alpha, lora_dropout)
         else:
+            replica = copy.deepcopy(qkv_linear)
             replica._register_load_state_dict_pre_hook(partial(hooker.qkv_linear_hook, replica))
         modules.append(replica)
     return nn.ModuleList(modules)

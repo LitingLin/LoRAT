@@ -4,13 +4,12 @@ num_epochs: 170
 
 profiling:
   enabled: true
-  latency:
-    train:
-      dtype: "float32"
-      auto_mixed_precision:
-        enabled: true
-    eval:
-      dtype: "float16"
+  train:
+    dtype: "float32"
+    auto_mixed_precision:
+      enabled: true
+  eval:
+    dtype: "float16"
 
 checkpoint:
   - type: "regular"
